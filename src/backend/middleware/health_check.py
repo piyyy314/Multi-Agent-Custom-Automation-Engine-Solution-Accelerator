@@ -72,9 +72,16 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
             status_code = 200 if status.status else 503
             status_message = "OK" if status.status else "Service Unavailable"
 
+            # SECURITY: Protect the detailed health check from unauthorized disclosure.
+            # 1. Reject empty/blank password configurations to prevent accidental open access.
+            # 2. Use secrets.compare_digest to prevent timing attacks when comparing the security code.
+            import secrets
+            code_param = request.query_params.get("code")
             if (
-                self.password is not None
-                and request.query_params.get("code") == self.password
+                self.password
+                and self.password.strip()
+                and code_param is not None
+                and secrets.compare_digest(code_param, self.password)
             ):
                 return JSONResponse(jsonable_encoder(status), status_code=status_code)
 
