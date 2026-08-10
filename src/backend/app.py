@@ -74,7 +74,6 @@ logging.getLogger("azure.monitor.opentelemetry.exporter.export._base").setLevel(
 # Initialize the FastAPI app
 app = FastAPI(lifespan=lifespan)
 
-frontend_url = config.FRONTEND_SITE_NAME
 # Configure Azure Monitor and instrument FastAPI for OpenTelemetry
 # This enables automatic request tracing, dependency tracking, and proper operation_id
 if config.APPLICATIONINSIGHTS_CONNECTION_STRING:
@@ -95,10 +94,23 @@ else:
         "No Application Insights connection string found. Telemetry disabled."
     )
 
+# Configure CORS based on environment and frontend configuration
+frontend_url = config.FRONTEND_SITE_NAME
+origins = []
+if frontend_url and frontend_url != "*":
+    origins.append(frontend_url)
+# Always include common local origins in development/testing mode
+if config.APP_ENV == "dev":
+    origins.extend(["http://localhost:3000", "http://127.0.0.1:3000"])
+
+# Ensure we have at least one valid origin or fallback to local hosts if empty
+if not origins:
+    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 # Add this near the top of your app.py, after initializing the app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development; restrict in production
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

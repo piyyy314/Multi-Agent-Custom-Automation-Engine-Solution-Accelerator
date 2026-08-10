@@ -1,3 +1,14 @@
+import os
+import sys
+
+# Provide safe defaults for environment variables before any imports load config
+os.environ.setdefault("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=mock")
+os.environ.setdefault("AZURE_AI_SUBSCRIPTION_ID", "mock")
+os.environ.setdefault("AZURE_AI_RESOURCE_GROUP", "mock")
+os.environ.setdefault("AZURE_AI_PROJECT_NAME", "mock")
+os.environ.setdefault("AZURE_AI_AGENT_ENDPOINT", "https://agents.example.com/")
+os.environ.setdefault("AZURE_OPENAI_ENDPOINT", "https://openai.example.com/")
+
 from unittest.mock import patch, Mock
 import base64
 import json
@@ -51,3 +62,16 @@ def test_get_tenantid_with_invalid_b64(mock_logger):
 
     assert tenant_id == ""
     mock_logger().exception.assert_called_once()
+
+
+def test_get_authenticated_user_details_no_headers_production():
+    """Test get_authenticated_user_details in production environment with no auth headers."""
+    with patch("common.config.app_config.config") as mock_config:
+        mock_config.APP_ENV = "prod"
+        request_headers = {}
+
+        result = get_authenticated_user_details(request_headers)
+
+        # Verify that it did not fall back to sample_user and instead returns empty/None details
+        assert result.get("user_principal_id") is None
+        assert result.get("user_name") is None
