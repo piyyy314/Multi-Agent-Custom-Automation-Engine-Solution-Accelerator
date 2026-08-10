@@ -5,6 +5,7 @@ sample_user = {
     "Client-Ip": "22.222.222.2222:64379",
     "Content-Length": "192",
     "Content-Type": "application/json",
+    "Cookie": "AppServiceAuthSession=mock_session_data_for_testing",
     "Disguised-Host": "your_app_service.azurewebsites.net",
     "Host": "your_app_service.azurewebsites.net",
     "Max-Forwards": "10",
