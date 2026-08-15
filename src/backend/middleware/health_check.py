@@ -73,7 +73,7 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
             status_message = "OK" if status.status else "Service Unavailable"
 
             if (
-                self.password is not None
+                self.password
                 and request.query_params.get("code") == self.password
             ):
                 return JSONResponse(jsonable_encoder(status), status_code=status_code)
