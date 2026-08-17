@@ -1,3 +1,6 @@
+import asyncio
+import hmac
+import inspect
 import logging
 from typing import Awaitable, Callable, Dict
 
@@ -55,7 +58,11 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
             if not name or not check:
                 continue
             try:
-                if not callable(check) or not hasattr(check, "__await__"):
+                if not callable(check) or not (
+                    asyncio.iscoroutinefunction(check)
+                    or inspect.iscoroutinefunction(check)
+                    or hasattr(check, "__await__")
+                ):
                     logging.error(f"Check {name} is not a coroutine function")
                     raise ValueError(f"Check {name} is not a coroutine function")
                 results.Add(name, await check())
@@ -72,9 +79,12 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
             status_code = 200 if status.status else 503
             status_message = "OK" if status.status else "Service Unavailable"
 
+            provided_code = request.query_params.get("code")
+            # Require non-empty configured password and use constant-time comparison to prevent timing attacks/auth bypass
             if (
-                self.password is not None
-                and request.query_params.get("code") == self.password
+                bool(self.password)
+                and provided_code is not None
+                and hmac.compare_digest(provided_code, self.password)
             ):
                 return JSONResponse(jsonable_encoder(status), status_code=status_code)
 

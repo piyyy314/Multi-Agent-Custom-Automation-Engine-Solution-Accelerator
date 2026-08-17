@@ -44,6 +44,44 @@ def test_health_check_success():
     assert response.text == "Service Unavailable"
 
 
+def test_health_check_correct_password():
+    """Test the health check endpoint with a correct password."""
+    app_success = FastAPI()
+    app_success.add_middleware(
+        HealthCheckMiddleware,
+        checks={"success": successful_check},
+        password="test123",
+    )
+    client = TestClient(app_success)
+    response = client.get("/healthz?code=test123")
+
+    assert response.status_code == 200
+    json_data = response.json()
+    assert json_data["status"] is True
+    assert "Default" in json_data["results"]
+
+
+def test_health_check_empty_password_bypass_prevention():
+    """Test that empty string or None password prevents auth bypass via ?code=."""
+    app_empty = FastAPI()
+    app_empty.add_middleware(
+        HealthCheckMiddleware,
+        checks={"success": successful_check},
+        password="",
+    )
+    client = TestClient(app_empty)
+
+    # Calling with empty code parameter
+    response_empty_code = client.get("/healthz?code=")
+    assert response_empty_code.status_code == 200
+    assert response_empty_code.text == "OK"
+
+    # Calling with non-empty code parameter
+    response_some_code = client.get("/healthz?code=anything")
+    assert response_some_code.status_code == 200
+    assert response_some_code.text == "OK"
+
+
 def test_root_endpoint():
     """Test the root endpoint to ensure the app is functioning."""
     client = TestClient(app)
