@@ -1,4 +1,5 @@
 import logging
+import secrets
 from typing import Awaitable, Callable, Dict
 
 from fastapi import Request
@@ -72,9 +73,14 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
             status_code = 200 if status.status else 503
             status_message = "OK" if status.status else "Service Unavailable"
 
+            # Security: Only return detailed internal health JSON if a non-empty password
+            # is configured and matches the provided code using constant-time comparison.
+            # This prevents information disclosure and timing attacks.
+            provided_code = request.query_params.get("code")
             if (
-                self.password is not None
-                and request.query_params.get("code") == self.password
+                self.password
+                and provided_code
+                and secrets.compare_digest(provided_code, self.password)
             ):
                 return JSONResponse(jsonable_encoder(status), status_code=status_code)
 
