@@ -15,9 +15,18 @@ load_dotenv()
 
 app = FastAPI()
 
+# Proxy configuration for WAF/private networking deployments
+PROXY_API_REQUESTS = os.getenv("PROXY_API_REQUESTS", "false").lower() == "true"
+BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000")
+
+# Restrict CORS origins based on configuration instead of allowing wildcard '*'
+origins = [BACKEND_API_URL]
+if os.getenv("APP_ENV", "dev") == "dev":
+    origins.extend(["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000", "http://127.0.0.1:8000"])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=list(set(origins)),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -25,10 +34,6 @@ app.add_middleware(
 # Build paths
 BUILD_DIR = os.path.join(os.path.dirname(__file__), "build")
 INDEX_HTML = os.path.join(BUILD_DIR, "index.html")
-
-# Proxy configuration for WAF/private networking deployments
-PROXY_API_REQUESTS = os.getenv("PROXY_API_REQUESTS", "false").lower() == "true"
-BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000")
 
 # Serve static files from build directory
 app.mount(
