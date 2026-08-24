@@ -14,3 +14,14 @@ This journal records critical security-focused learnings discovered in the codeb
 **Prevention:**
 1. Restrict CORS allowed origins dynamically based on the configured frontend URL and local development origins, rejecting wildcards when credentials are enabled.
 2. Enforce strict environment-based guards (`APP_ENV == "dev"`) before returning default or mock users, failing securely on missing principal headers in non-development environments.
+
+## 2025-03-10 - Health Check Middleware Information Leak on Empty Password
+**Vulnerability:**
+When `HealthCheckMiddleware` was initialized with an empty password string (`password=""`), querying `/healthz?code=` caused `"" == ""` to evaluate to True, leaking detailed internal system health check results and exception messages to unauthenticated callers.
+
+**Learning:**
+`self.password is not None` evaluated to True for empty string passwords (`""`), allowing empty string `?code=` query parameters to bypass password protection. Furthermore, standard string equality (`==`) introduced potential timing side-channel risks.
+
+**Prevention:**
+1. Require `self.password` to be non-empty (`bool(self.password)`) before authorizing detailed health responses.
+2. Use constant-time string comparison (`secrets.compare_digest`) for authorization token verification.
