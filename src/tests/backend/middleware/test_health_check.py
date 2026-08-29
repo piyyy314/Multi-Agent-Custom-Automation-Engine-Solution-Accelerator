@@ -523,6 +523,31 @@ class TestHealthCheckMiddleware:
                     assert result is mock_response_instance
 
     @pytest.mark.asyncio
+    async def test_dispatch_method_with_empty_password_protection(self):
+        """Test dispatch method when password is set to empty string."""
+        mock_request = Mock()
+        mock_request.url.path = "/healthz"
+        mock_request.query_params.get.return_value = ""
+
+        mock_call_next = AsyncMock()
+        middleware = HealthCheckMiddleware(self.mock_app, {}, password="")
+
+        with patch.object(middleware, 'check') as mock_check:
+            mock_status = Mock()
+            mock_status.status = True
+            mock_check.return_value = mock_status
+
+            with patch('backend.middleware.health_check.PlainTextResponse') as mock_plain_response:
+                mock_response_instance = Mock()
+                mock_plain_response.return_value = mock_response_instance
+
+                result = await middleware.dispatch(mock_request, mock_call_next)
+
+                # Verify PlainTextResponse was returned, not JSONResponse
+                mock_plain_response.assert_called_once_with("OK", status_code=200)
+                assert result is mock_response_instance
+
+    @pytest.mark.asyncio
     async def test_check_method_with_empty_name_check(self):
         """Test check method with empty name in checks."""
         async def empty_name_check():
