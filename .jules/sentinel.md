@@ -14,3 +14,16 @@ This journal records critical security-focused learnings discovered in the codeb
 **Prevention:**
 1. Restrict CORS allowed origins dynamically based on the configured frontend URL and local development origins, rejecting wildcards when credentials are enabled.
 2. Enforce strict environment-based guards (`APP_ENV == "dev"`) before returning default or mock users, failing securely on missing principal headers in non-development environments.
+
+## 2025-05-18 - Unprotected Health Check Details via Empty Password Matching & Non-Constant-Time Password Check
+**Vulnerability:**
+1. `HealthCheckMiddleware` checked `self.password is not None`, which allowed an empty string password (`password=""`) to match `GET /healthz?code=`, exposing internal system health details and stack exceptions in JSON format to unauthenticated users.
+2. Direct string equality comparison (`==`) was used for secret/access code comparison, introducing potential timing attack vulnerabilities.
+
+**Learning:**
+1. Using `is not None` to check if a password parameter is configured allowed empty password strings to be considered "configured", making empty query parameters match empty secrets.
+2. Security-sensitive string comparisons were performed without constant-time comparison helpers.
+
+**Prevention:**
+1. Check `bool(self.password)` to ensure password authentication is only enabled when a non-empty secret is set.
+2. Always use `hmac.compare_digest` for secret and authorization token comparisons to prevent timing side-channel attacks.
