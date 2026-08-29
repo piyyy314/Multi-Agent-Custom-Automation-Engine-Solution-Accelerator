@@ -1,6 +1,7 @@
 # app_config.py
 import logging
 import os
+import re
 from typing import Optional
 
 from azure.ai.projects.aio import AIProjectClient
@@ -282,7 +283,10 @@ class AppConfig:
         Args:
             language: The language code to set (e.g., 'en-US')
         """
-        os.environ["USER_LOCAL_BROWSER_LANGUAGE"] = language
+        if isinstance(language, str) and re.match(r"^[a-zA-Z0-9\-_]{2,35}$", language):
+            os.environ["USER_LOCAL_BROWSER_LANGUAGE"] = language
+        else:
+            self.logger.warning("Invalid browser language code rejected: %s", str(language)[:20])
 
     # Get agent team list by user_id dictionary index
     def get_agents(self) -> dict[str, list]:
