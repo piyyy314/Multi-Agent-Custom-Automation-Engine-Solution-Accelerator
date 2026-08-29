@@ -45,27 +45,41 @@ def test_health_check_success():
 
 
 def test_health_check_correct_password():
-    """Test the health check endpoint with correct password returns detailed JSON."""
-    client = TestClient(app)
+    """Test the health check endpoint with a correct password."""
+    app_success = FastAPI()
+    app_success.add_middleware(
+        HealthCheckMiddleware,
+        checks={"success": successful_check},
+        password="test123",
+    )
+    client = TestClient(app_success)
     response = client.get("/healthz?code=test123")
 
-    assert response.status_code == 503
+    assert response.status_code == 200
     json_data = response.json()
-    assert "status" in json_data
-    assert "results" in json_data
+    assert json_data["status"] is True
+    assert "Default" in json_data["results"]
 
 
-def test_health_check_empty_password_config():
-    """Test that an empty password configuration does not leak JSON with code param."""
-    empty_pass_app = FastAPI()
-    empty_pass_app.add_middleware(HealthCheckMiddleware, checks=checks, password="")
-    client = TestClient(empty_pass_app)
+def test_health_check_empty_password_bypass_prevention():
+    """Test that empty string or None password prevents auth bypass via ?code=."""
+    app_empty = FastAPI()
+    app_empty.add_middleware(
+        HealthCheckMiddleware,
+        checks={"success": successful_check},
+        password="",
+    )
+    client = TestClient(app_empty)
 
-    response = client.get("/healthz?code=")
-    assert response.text == "Service Unavailable"
+    # Calling with empty code parameter
+    response_empty_code = client.get("/healthz?code=")
+    assert response_empty_code.status_code == 200
+    assert response_empty_code.text == "OK"
 
-    response = client.get("/healthz?code=test")
-    assert response.text == "Service Unavailable"
+    # Calling with non-empty code parameter
+    response_some_code = client.get("/healthz?code=anything")
+    assert response_some_code.status_code == 200
+    assert response_some_code.text == "OK"
 
 
 def test_root_endpoint():
