@@ -1,9 +1,10 @@
-# File: test_message.py
-
+import pytest
 import uuid
-from src.backend.common.models.messages_af import (
+from pydantic import ValidationError
+from common.config.app_config import config
+from common.models.messages_af import (
     DataType,
-    AgentType as BAgentType,   # map to your enum
+    AgentType as BAgentType,
     StepStatus,
     PlanStatus,
     HumanFeedbackStatus,
@@ -11,8 +12,7 @@ from src.backend.common.models.messages_af import (
     Step,
     Plan,
     AgentMessage,
-    ActionRequest,
-    HumanFeedback,
+    UserLanguage,
 )
 
 
@@ -20,7 +20,7 @@ def test_enum_values():
     """Test enumeration values for consistency."""
     assert DataType.session == "session"
     assert DataType.plan == "plan"
-    assert BAgentType.HUMAN == "Human_Agent"   # was human_agent / "HumanAgent"
+    assert BAgentType.HUMAN == "Human_Agent"
     assert StepStatus.completed == "completed"
     assert PlanStatus.in_progress == "in_progress"
     assert HumanFeedbackStatus.requested == "requested"
@@ -28,8 +28,9 @@ def test_enum_values():
 
 def test_plan_with_steps_update_counts():
     """Test the update_step_counts method in PlanWithSteps."""
+    plan_id = str(uuid.uuid4())
     step1 = Step(
-        plan_id=str(uuid.uuid4()),
+        plan_id=plan_id,
         action="Review document",
         agent=BAgentType.HUMAN,
         status=StepStatus.completed,
@@ -37,7 +38,7 @@ def test_plan_with_steps_update_counts():
         user_id=str(uuid.uuid4()),
     )
     step2 = Step(
-        plan_id=str(uuid.uuid4()),
+        plan_id=plan_id,
         action="Approve document",
         agent=BAgentType.HR,
         status=StepStatus.failed,
@@ -45,6 +46,7 @@ def test_plan_with_steps_update_counts():
         user_id=str(uuid.uuid4()),
     )
     plan = PlanWithSteps(
+        plan_id=plan_id,
         steps=[step1, step2],
         session_id=str(uuid.uuid4()),
         user_id=str(uuid.uuid4()),
@@ -71,35 +73,10 @@ def test_agent_message_creation():
     assert agent_message.content == "Test message content"
 
 
-def test_action_request_creation():
-    """Test the creation of ActionRequest."""
-    action_request = ActionRequest(
-        step_id=str(uuid.uuid4()),
-        plan_id=str(uuid.uuid4()),
-        session_id=str(uuid.uuid4()),
-        action="Review and approve",
-        agent=BAgentType.PROCUREMENT,
-    )
-    assert action_request.action == "Review and approve"
-    assert action_request.agent == BAgentType.PROCUREMENT
-
-
-def test_human_feedback_creation():
-    """Test HumanFeedback creation."""
-    human_feedback = HumanFeedback(
-        step_id=str(uuid.uuid4()),
-        plan_id=str(uuid.uuid4()),
-        session_id=str(uuid.uuid4()),
-        approved=True,
-        human_feedback="Looks good!",
-    )
-    assert human_feedback.approved is True
-    assert human_feedback.human_feedback == "Looks good!"
-
-
 def test_plan_initialization():
     """Test Plan model initialization."""
     plan = Plan(
+        plan_id=str(uuid.uuid4()),
         session_id=str(uuid.uuid4()),
         user_id=str(uuid.uuid4()),
         initial_goal="Complete document processing",
@@ -120,3 +97,35 @@ def test_step_defaults():
     )
     assert step.status == StepStatus.planned
     assert step.human_approval_status == HumanFeedbackStatus.requested
+
+
+def test_user_language_valid():
+    """Test valid browser language tags."""
+    for lang in ["en", "en-US", "fr-FR", "zh_CN", "es-419"]:
+        ul = UserLanguage(language=lang)
+        assert ul.language == lang
+
+
+def test_user_language_invalid():
+    """Test that invalid language codes raise ValidationError to prevent injection/pollution."""
+    invalid_inputs = [
+        "a",  # too short
+        "a" * 36,  # too long
+        "en<script>",  # special characters
+        "../../etc/passwd",  # path traversal attempt
+        "en US",  # contains spaces
+        "en;DROP TABLE users;",  # SQL/command injection attempt
+    ]
+    for invalid in invalid_inputs:
+        with pytest.raises(ValidationError):
+            UserLanguage(language=invalid)
+
+
+def test_app_config_set_user_local_browser_language():
+    """Test that set_user_local_browser_language validates input before updating environment."""
+    config.set_user_local_browser_language("fr-CA")
+    assert config.get_user_local_browser_language() == "fr-CA"
+
+    # Attempt setting an invalid language string; environment variable should not update
+    config.set_user_local_browser_language("<malicious_payload>")
+    assert config.get_user_local_browser_language() == "fr-CA"
