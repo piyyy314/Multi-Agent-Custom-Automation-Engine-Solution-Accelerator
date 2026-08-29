@@ -81,9 +81,7 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
             code_param = request.query_params.get("code")
             if (
                 self.password
-                and self.password.strip()
-                and code_param is not None
-                and secrets.compare_digest(code_param, self.password)
+                and request.query_params.get("code") == self.password
             ):
                 return JSONResponse(jsonable_encoder(status), status_code=status_code)
 
