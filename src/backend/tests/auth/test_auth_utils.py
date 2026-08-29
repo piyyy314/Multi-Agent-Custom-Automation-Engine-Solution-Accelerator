@@ -75,3 +75,23 @@ def test_get_authenticated_user_details_no_headers_production():
         # Verify that it did not fall back to sample_user and instead returns empty/None details
         assert result.get("user_principal_id") is None
         assert result.get("user_name") is None
+
+
+def test_get_authenticated_user_details_case_insensitive_headers():
+    """Test get_authenticated_user_details with uppercase/mixed-case headers."""
+    request_headers = {
+        "X-MS-CLIENT-PRINCIPAL-ID": "uppercase-user-id",
+        "X-MS-CLIENT-PRINCIPAL-NAME": "uppercase-user-name",
+        "X-MS-CLIENT-PRINCIPAL-IDP": "uppercase-auth-provider",
+        "X-MS-TOKEN-AAD-ID-TOKEN": "uppercase-auth-token",
+        "X-MS-CLIENT-PRINCIPAL": "uppercase-client-principal-b64",
+    }
+
+    result = get_authenticated_user_details(request_headers)
+
+    assert result["user_principal_id"] == "uppercase-user-id"
+    assert result["user_name"] == "uppercase-user-name"
+    assert result["auth_provider"] == "uppercase-auth-provider"
+    assert result["auth_token"] == "uppercase-auth-token"
+    assert result["client_principal_b64"] == "uppercase-client-principal-b64"
+    assert result["aad_id_token"] == "uppercase-auth-token"
