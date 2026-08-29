@@ -44,15 +44,28 @@ def test_health_check_success():
     assert response.text == "Service Unavailable"
 
 
-def test_health_check_empty_string_password():
-    """Test that configuring empty password string does not allow access to JSON details via code query param."""
+def test_health_check_correct_password():
+    """Test the health check endpoint with correct password returns detailed JSON."""
+    client = TestClient(app)
+    response = client.get("/healthz?code=test123")
+
+    assert response.status_code == 503
+    json_data = response.json()
+    assert "status" in json_data
+    assert "results" in json_data
+
+
+def test_health_check_empty_password_config():
+    """Test that an empty password configuration does not leak JSON with code param."""
     empty_pass_app = FastAPI()
-    empty_pass_app.add_middleware(HealthCheckMiddleware, checks={}, password="")
+    empty_pass_app.add_middleware(HealthCheckMiddleware, checks=checks, password="")
     client = TestClient(empty_pass_app)
 
     response = client.get("/healthz?code=")
-    assert response.status_code == 200
-    assert response.text == "OK"  # Plain text response, NOT detailed JSON
+    assert response.text == "Service Unavailable"
+
+    response = client.get("/healthz?code=test")
+    assert response.text == "Service Unavailable"
 
 
 def test_root_endpoint():
