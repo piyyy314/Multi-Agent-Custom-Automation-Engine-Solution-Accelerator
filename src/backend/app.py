@@ -149,8 +149,9 @@ async def user_browser_language_endpoint(user_language: UserLanguage, request: R
     """
     config.set_user_local_browser_language(user_language.language)
 
-    # Log the received language for the user
-    logging.info(f"Received browser language '{user_language}' for user ")
+    # Sanitize inputs for logging to prevent CRLF log injection attacks
+    sanitized_lang = user_language.language.replace("\r", "").replace("\n", "")
+    logging.info("Received browser language '%s' for user", sanitized_lang)
 
     return {"status": "Language received successfully"}
 
