@@ -38,6 +38,7 @@ async def test_team_specific_methods():
         input_key="test_key",
         type="test_agent",
         name="Test Agent",
+        deployment_name="gpt-5.4-mini",
         system_message="Test system message",
         description="Test description",
         icon="test-icon.png",
