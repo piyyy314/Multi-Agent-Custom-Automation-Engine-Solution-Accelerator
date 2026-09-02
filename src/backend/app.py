@@ -13,8 +13,10 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 # from common.config.app_config import config
 from common.models.messages_af import UserLanguage
 
+from auth.auth_utils import get_authenticated_user_details
+
 # FastAPI imports
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -146,11 +148,19 @@ async def user_browser_language_endpoint(user_language: UserLanguage, request: R
             status:
               type: string
               description: Confirmation message
+      401:
+        description: Missing or invalid user information
     """
+    # SECURITY: Require user authentication before allowing setting browser language environment configuration
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Missing or invalid user information")
+
     config.set_user_local_browser_language(user_language.language)
 
-    # Log the received language for the user
-    logging.info(f"Received browser language '{user_language}' for user ")
+    # Log the received language for the authenticated user
+    logging.info(f"Received browser language '{user_language.language}' for user {user_id}")
 
     return {"status": "Language received successfully"}
 

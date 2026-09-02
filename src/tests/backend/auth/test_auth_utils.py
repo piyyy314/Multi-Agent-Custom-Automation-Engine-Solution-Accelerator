@@ -15,6 +15,7 @@ src_path = os.path.abspath(src_path)
 sys.path.insert(0, src_path)
 
 # Import the functions to test - using absolute import path that coverage can track
+from backend.app import app
 from backend.auth.auth_utils import get_authenticated_user_details, get_tenantid
 
 
@@ -281,6 +282,45 @@ class TestAuthUtilsIntegration:
         assert isinstance(user_details, dict)
         assert user_details["user_principal_id"] == "malformed-id"
         assert tenant_id == ""  # Should return empty string for invalid base64
+
+
+class TestUserBrowserLanguageEndpoint:
+    """Test cases for /api/user_browser_language authentication requirement."""
+
+    def test_user_browser_language_unauthenticated(self):
+        """Verify unauthenticated requests return a 401 status code."""
+        from fastapi.testclient import TestClient
+        from common.config.app_config import config
+
+        client = TestClient(app)
+        with patch.object(config, "APP_ENV", "prod"):
+            response = client.post(
+                "/api/user_browser_language",
+                json={"language": "fr-FR"},
+            )
+            assert response.status_code == 401
+            assert response.json()["detail"] == "Missing or invalid user information"
+
+    def test_user_browser_language_authenticated(self):
+        """Verify authenticated requests return a 200 status code."""
+        from fastapi.testclient import TestClient
+
+        original_lang = os.environ.get("USER_LOCAL_BROWSER_LANGUAGE")
+        try:
+            client = TestClient(app)
+            headers = {"x-ms-client-principal-id": "test-user-id-123"}
+            response = client.post(
+                "/api/user_browser_language",
+                json={"language": "es-ES"},
+                headers=headers,
+            )
+            assert response.status_code == 200
+            assert response.json() == {"status": "Language received successfully"}
+        finally:
+            if original_lang is None:
+                os.environ.pop("USER_LOCAL_BROWSER_LANGUAGE", None)
+            else:
+                os.environ["USER_LOCAL_BROWSER_LANGUAGE"] = original_lang
 
 
 if __name__ == "__main__":
