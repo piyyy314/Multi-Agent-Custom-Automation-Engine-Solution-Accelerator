@@ -876,21 +876,28 @@ async def upload_team_config(
             status_code=400,
             detail=f"Error retrieving team configuration: {e}",
         ) from e
-    # Validate file is provided and is JSON
-    if not file:
-        raise HTTPException(status_code=400, detail="No file provided")
+    # SECURITY: Validate file and filename presence before evaluating file extension
+    if not file or not file.filename or not file.filename.endswith(".json"):
+        raise HTTPException(status_code=400, detail="File must be a valid JSON file")
 
-    if not file.filename.endswith(".json"):
-        raise HTTPException(status_code=400, detail="File must be a JSON file")
+    # SECURITY: Enforce 2MB maximum size limit and read in chunks to prevent memory exhaustion DoS attacks
+    MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
+    content = bytearray()
+    chunk_size = 64 * 1024
+    while chunk := await file.read(chunk_size):
+        content.extend(chunk)
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Uploaded file size exceeds maximum allowed limit of 2MB",
+            )
 
     try:
-        # Read and parse JSON content
-        content = await file.read()
         try:
             json_data = json.loads(content.decode("utf-8"))
         except json.JSONDecodeError as e:
             raise HTTPException(
-                status_code=400, detail=f"Invalid JSON format: {str(e)}"
+                status_code=400, detail="Invalid JSON format in configuration file"
             ) from e
 
         # Validate content with RAI before processing
