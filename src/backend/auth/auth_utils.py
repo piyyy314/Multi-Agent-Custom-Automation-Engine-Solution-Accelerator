@@ -10,8 +10,14 @@ def get_authenticated_user_details(request_headers):
     # bypass or failure due to case-sensitivity variations in HTTP proxies/clients.
     normalized_input_headers = {k.lower(): v for k, v in request_headers.items()}
 
+    # SECURITY: Extract and validate non-empty x-ms-client-principal-id header value.
+    # Blank or whitespace-only principal headers must be treated as missing authentication.
+    client_principal_id = normalized_input_headers.get("x-ms-client-principal-id")
+    if client_principal_id is not None:
+        client_principal_id = str(client_principal_id).strip()
+
     # check the headers for the Principal-Id (the guid of the signed in user)
-    if "x-ms-client-principal-id" not in normalized_input_headers:
+    if not client_principal_id:
         logging.info("No user principal found in headers")
         from common.config.app_config import config
         # SECURITY: Strictly restrict fallback to default sample user in development mode only
@@ -24,10 +30,9 @@ def get_authenticated_user_details(request_headers):
         # if it is, get the user details from the EasyAuth headers
         raw_user_object = normalized_input_headers
 
-    normalized_headers = {k.lower(): v for k, v in raw_user_object.items()}
-    user_object["user_principal_id"] = normalized_headers.get(
-        "x-ms-client-principal-id"
-    )
+    normalized_headers = {k.lower(): str(v).strip() if v is not None else None for k, v in raw_user_object.items()}
+    user_principal_id = normalized_headers.get("x-ms-client-principal-id")
+    user_object["user_principal_id"] = user_principal_id or None
     user_object["user_name"] = normalized_headers.get("x-ms-client-principal-name")
     user_object["auth_provider"] = normalized_headers.get("x-ms-client-principal-idp")
     user_object["auth_token"] = normalized_headers.get("x-ms-token-aad-id-token")

@@ -95,3 +95,26 @@ def test_get_authenticated_user_details_case_insensitive_headers():
     assert result["auth_token"] == "uppercase-auth-token"
     assert result["client_principal_b64"] == "uppercase-client-principal-b64"
     assert result["aad_id_token"] == "uppercase-auth-token"
+
+
+def test_get_authenticated_user_details_empty_or_whitespace_header_prod():
+    """Test get_authenticated_user_details in prod with empty/whitespace principal ID headers."""
+    with patch("common.config.app_config.config") as mock_config:
+        mock_config.APP_ENV = "prod"
+
+        for blank_id in ["", "   ", "\t\n"]:
+            request_headers = {"x-ms-client-principal-id": blank_id}
+            result = get_authenticated_user_details(request_headers)
+            assert result.get("user_principal_id") is None
+
+
+def test_get_authenticated_user_details_empty_or_whitespace_header_dev():
+    """Test get_authenticated_user_details in dev with empty/whitespace principal ID headers."""
+    with patch("common.config.app_config.config") as mock_config:
+        mock_config.APP_ENV = "dev"
+
+        request_headers = {"x-ms-client-principal-id": "   "}
+        result = get_authenticated_user_details(request_headers)
+        # Should fall back to sample_user in dev mode rather than using whitespace string as ID
+        assert result.get("user_principal_id") is not None
+        assert result.get("user_principal_id") != "   "
