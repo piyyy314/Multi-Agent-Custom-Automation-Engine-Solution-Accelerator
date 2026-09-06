@@ -16,3 +16,13 @@ Checking `is not None` on configuration settings that default or fall back to em
 
 **Prevention:**
 Always check truthiness (`if self.password and ...`) or validate that secret parameters are non-empty strings before using them in equality comparisons for authentication or authorization checks.
+
+## 2025-03-29 - CosmosDB Query User ID Filter Omission (IDOR)
+**Vulnerability:**
+In `CosmosDBClient.get_plan_by_plan_id`, the SQL query string `SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type` omitted `c.user_id=@user_id` despite including `@user_id` in the query parameter dictionary. This allowed cross-user access to execution plans via `plan_id`.
+
+**Learning:**
+Passing `user_id` in query parameters does not enforce authorization if the SQL string itself omits the corresponding `WHERE` clause condition.
+
+**Prevention:**
+Ensure every parameter supplied in database query parameter maps is explicitly referenced and enforced in SQL `WHERE` clauses for tenant and user isolation.
