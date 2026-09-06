@@ -188,7 +188,8 @@ class CosmosDBClient(DatabaseBase):
 
     async def get_plan_by_plan_id(self, plan_id: str) -> Optional[Plan]:
         """Retrieve a plan by plan_id."""
-        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type"
+        # SECURITY: Include c.user_id=@user_id to enforce authorization and prevent cross-user plan access (IDOR).
+        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.plan},
