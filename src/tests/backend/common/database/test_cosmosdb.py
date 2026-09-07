@@ -484,7 +484,7 @@ class TestCosmosDBPlanOperations:
         result = await client.get_plan_by_plan_id("test_plan_id")
         
         assert result == mock_plan
-        expected_query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type"
+        expected_query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         expected_params = [
             {"name": "@plan_id", "value": "test_plan_id"},
             {"name": "@data_type", "value": DataType.plan},
