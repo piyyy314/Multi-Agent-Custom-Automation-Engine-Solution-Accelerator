@@ -188,7 +188,8 @@ class CosmosDBClient(DatabaseBase):
 
     async def get_plan_by_plan_id(self, plan_id: str) -> Optional[Plan]:
         """Retrieve a plan by plan_id."""
-        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type"
+        # SECURITY: Ensure user_id filter is included in SQL query string to prevent IDOR / authorization bypass
+        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.plan},
@@ -442,10 +443,12 @@ class CosmosDBClient(DatabaseBase):
 
     async def delete_plan_by_plan_id(self, plan_id: str) -> bool:
         """Delete a plan by its ID."""
-        query = "SELECT c.id, c.session_id FROM c WHERE c.id=@plan_id "
+        # SECURITY: Ensure user_id filter is included in SQL query string to prevent unauthorized deletion
+        query = "SELECT c.id, c.session_id FROM c WHERE c.id=@plan_id AND c.user_id=@user_id"
 
         params = [
             {"name": "@plan_id", "value": plan_id},
+            {"name": "@user_id", "value": self.user_id},
         ]
         items = self.container.query_items(query=query, parameters=params)
         print("Items to delete planid:", items)
