@@ -16,3 +16,8 @@ Checking `is not None` on configuration settings that default or fall back to em
 
 **Prevention:**
 Always check truthiness (`if self.password and ...`) or validate that secret parameters are non-empty strings before using them in equality comparisons for authentication or authorization checks.
+
+## 2025-05-18 - Parameter Omission IDOR in Cosmos DB Queries
+**Vulnerability:** In `CosmosDBClient.get_plan_by_plan_id` and `delete_plan_by_plan_id`, `@user_id` was passed in the SQL parameter list, but `AND c.user_id=@user_id` was omitted from the SQL query string. This allowed any authenticated user to read or delete another user's plan by plan ID (IDOR / CWE-284).
+**Learning:** Passing a parameter in Cosmos DB query bindings does not enforce filtering unless the SQL query string explicitly contains the equality predicate in the `WHERE` clause.
+**Prevention:** Always verify that every binding parameter in the parameters list maps directly to an explicit SQL filtering clause in the query string.
