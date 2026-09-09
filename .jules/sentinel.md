@@ -16,3 +16,8 @@ Checking `is not None` on configuration settings that default or fall back to em
 
 **Prevention:**
 Always check truthiness (`if self.password and ...`) or validate that secret parameters are non-empty strings before using them in equality comparisons for authentication or authorization checks.
+
+## 2025-03-24 - WebSocket Query Parameter User Impersonation Bypass
+**Vulnerability:** The `/socket/{process_id}` endpoint accepted an unauthenticated client-supplied `user_id` query parameter without extracting and validating the authenticated user principal ID from `websocket.headers`. This allowed an attacker to impersonate arbitrary users or listen/send messages under another user's session ID by appending `?user_id=<target_id>`.
+**Learning:** EasyAuth and standard reverse proxies forward client principal headers (`x-ms-client-principal-id`) during the WebSocket HTTP upgrade handshake in `websocket.headers`. Blindly trusting client-controlled query parameters for session ownership bypasses authentication.
+**Prevention:** Always authenticate WebSocket upgrade requests by passing `websocket.headers` into `get_authenticated_user_details` and enforce the authenticated user's principal ID over unauthenticated query parameters.
