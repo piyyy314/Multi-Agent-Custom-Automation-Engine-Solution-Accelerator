@@ -60,7 +60,13 @@ async def start_comms(
     # Always accept the WebSocket connection first
     await websocket.accept()
 
-    user_id = user_id or "00000000-0000-0000-0000-000000000000"
+    # SECURITY: Extract authenticated user from headers to prevent user impersonation via query parameter spoofing
+    authenticated_user = get_authenticated_user_details(request_headers=websocket.headers)
+    auth_user_id = authenticated_user.get("user_principal_id")
+    if auth_user_id:
+        user_id = auth_user_id
+    else:
+        user_id = user_id or "00000000-0000-0000-0000-000000000000"
 
     # Manually create a span for WebSocket since excluded_urls suppresses auto-instrumentation.
     # Without this, all track_event_if_configured calls inside WebSocket would get operation_Id = 0.
@@ -877,7 +883,7 @@ async def upload_team_config(
             detail=f"Error retrieving team configuration: {e}",
         ) from e
     # Validate file is provided and is JSON
-    if not file:
+    if not file or not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
 
     if not file.filename.endswith(".json"):
