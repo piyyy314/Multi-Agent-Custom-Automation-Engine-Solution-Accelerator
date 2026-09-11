@@ -10,9 +10,11 @@ def get_authenticated_user_details(request_headers):
     # bypass or failure due to case-sensitivity variations in HTTP proxies/clients.
     normalized_input_headers = {k.lower(): v for k, v in request_headers.items()}
 
-    # check the headers for the Principal-Id (the guid of the signed in user)
-    if "x-ms-client-principal-id" not in normalized_input_headers:
-        logging.info("No user principal found in headers")
+    principal_id = normalized_input_headers.get("x-ms-client-principal-id")
+
+    # SECURITY: Ensure Principal-Id header exists, is non-empty, and contains non-whitespace characters
+    if not principal_id or not str(principal_id).strip():
+        logging.info("No valid user principal found in headers")
         from common.config.app_config import config
         # SECURITY: Strictly restrict fallback to default sample user in development mode only
         if config.APP_ENV == "dev":
