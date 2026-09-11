@@ -95,3 +95,17 @@ def test_get_authenticated_user_details_case_insensitive_headers():
     assert result["auth_token"] == "uppercase-auth-token"
     assert result["client_principal_b64"] == "uppercase-client-principal-b64"
     assert result["aad_id_token"] == "uppercase-auth-token"
+
+
+def test_get_authenticated_user_details_empty_and_whitespace_principal_id_production():
+    """Test get_authenticated_user_details with empty or whitespace principal ID headers in prod."""
+    with patch("common.config.app_config.config") as mock_config:
+        mock_config.APP_ENV = "prod"
+
+        # Test empty string header
+        result_empty = get_authenticated_user_details({"x-ms-client-principal-id": ""})
+        assert result_empty.get("user_principal_id") is None
+
+        # Test whitespace-only string header
+        result_whitespace = get_authenticated_user_details({"x-ms-client-principal-id": "   "})
+        assert result_whitespace.get("user_principal_id") is None
