@@ -6,13 +6,18 @@ import logging
 def get_authenticated_user_details(request_headers):
     user_object = {}
 
-    # SECURITY: Normalize incoming header keys to lowercase first to prevent authentication
-    # bypass or failure due to case-sensitivity variations in HTTP proxies/clients.
-    normalized_input_headers = {k.lower(): v for k, v in request_headers.items()}
+    # SECURITY: Normalize incoming header keys to lowercase and strip whitespace from string values
+    # to prevent authentication bypass or failure due to case-sensitivity and blank header injection.
+    normalized_input_headers = {
+        k.lower(): (v.strip() if isinstance(v, str) else v)
+        for k, v in request_headers.items()
+    }
 
-    # check the headers for the Principal-Id (the guid of the signed in user)
-    if "x-ms-client-principal-id" not in normalized_input_headers:
-        logging.info("No user principal found in headers")
+    principal_id = normalized_input_headers.get("x-ms-client-principal-id")
+
+    # Check that a valid non-empty, non-whitespace Principal-Id was provided
+    if not principal_id:
+        logging.info("No valid user principal found in headers")
         from common.config.app_config import config
         # SECURITY: Strictly restrict fallback to default sample user in development mode only
         if config.APP_ENV == "dev":
@@ -24,10 +29,13 @@ def get_authenticated_user_details(request_headers):
         # if it is, get the user details from the EasyAuth headers
         raw_user_object = normalized_input_headers
 
-    normalized_headers = {k.lower(): v for k, v in raw_user_object.items()}
+    normalized_headers = {
+        k.lower(): (v.strip() if isinstance(v, str) else v)
+        for k, v in raw_user_object.items()
+    }
     user_object["user_principal_id"] = normalized_headers.get(
         "x-ms-client-principal-id"
-    )
+    ) or None
     user_object["user_name"] = normalized_headers.get("x-ms-client-principal-name")
     user_object["auth_provider"] = normalized_headers.get("x-ms-client-principal-idp")
     user_object["auth_token"] = normalized_headers.get("x-ms-token-aad-id-token")

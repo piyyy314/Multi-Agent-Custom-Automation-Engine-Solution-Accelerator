@@ -16,3 +16,13 @@ Checking `is not None` on configuration settings that default or fall back to em
 
 **Prevention:**
 Always check truthiness (`if self.password and ...`) or validate that secret parameters are non-empty strings before using them in equality comparisons for authentication or authorization checks.
+
+## 2025-03-25 - Authentication Bypass via Blank Principal Headers
+**Vulnerability:**
+`get_authenticated_user_details` checked key presence `if "x-ms-client-principal-id" not in normalized_input_headers:`. If a client sent a blank or whitespace-only header (`x-ms-client-principal-id: "   "`), key presence returned True, bypassing the fallback check and setting `user_principal_id = "   "`. Downstream endpoints checking `if not user_id:` treated `"   "` as a truthy string, allowing unauthenticated requests to pass identity checks.
+
+**Learning:**
+Checking dictionary key existence (`in dict`) rather than truthiness/content validity of header values can allow whitespace or empty string header injections to bypass authentication guards.
+
+**Prevention:**
+Strip leading/trailing whitespace from incoming authentication headers and validate that identity claims are non-empty strings (`if not principal_id:`) before accepting them as valid credentials.
