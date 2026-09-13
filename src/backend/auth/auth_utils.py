@@ -52,5 +52,6 @@ def get_tenantid(client_principal_b64):
             # Extract the tenant ID
             tenant_id = user_info.get("tid")  # 'tid' typically holds the tenant ID
         except Exception as ex:
-            logger.exception(ex)
+            # SECURITY: Do not log full stack traces for invalid user-supplied header inputs
+            logger.warning("Failed to extract tenant ID from client principal header: %s", ex)
     return tenant_id
