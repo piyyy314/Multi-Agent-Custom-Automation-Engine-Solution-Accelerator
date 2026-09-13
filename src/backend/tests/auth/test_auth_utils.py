@@ -61,7 +61,7 @@ def test_get_tenantid_with_invalid_b64(mock_logger):
     tenant_id = get_tenantid(invalid_b64)
 
     assert tenant_id == ""
-    mock_logger().exception.assert_called_once()
+    mock_logger().warning.assert_called_once()
 
 
 def test_get_authenticated_user_details_no_headers_production():
