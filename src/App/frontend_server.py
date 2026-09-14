@@ -30,10 +30,10 @@ INDEX_HTML = os.path.join(BUILD_DIR, "index.html")
 PROXY_API_REQUESTS = os.getenv("PROXY_API_REQUESTS", "false").lower() == "true"
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000")
 
-# Serve static files from build directory
-app.mount(
-    "/assets", StaticFiles(directory=os.path.join(BUILD_DIR, "assets")), name="assets"
-)
+# Serve static files from build directory if present
+assets_dir = os.path.join(BUILD_DIR, "assets")
+if os.path.exists(assets_dir):
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
 
 @app.get("/")
@@ -136,18 +136,21 @@ if PROXY_API_REQUESTS:
 
 @app.get("/{full_path:path}")
 async def serve_app(full_path: str):
-    # Remediation: normalize and check containment before serving
-    file_path = os.path.normpath(os.path.join(BUILD_DIR, full_path))
-    # Block traversal and dotfiles
-    if (
-        not file_path.startswith(BUILD_DIR)
-        or ".." in full_path
-        or "/." in full_path
-        or "\\." in full_path
-    ):
+    # SECURITY: Prevent path traversal vulnerabilities by replacing backslashes, resolving absolute paths,
+    # and strictly validating containment within BUILD_DIR using os.path.commonpath.
+    safe_relative_path = full_path.replace("\\", "/")
+    abs_build_dir = os.path.abspath(BUILD_DIR)
+    target_path = os.path.abspath(os.path.join(abs_build_dir, safe_relative_path))
+
+    try:
+        if os.path.commonpath([target_path, abs_build_dir]) != abs_build_dir:
+            return FileResponse(INDEX_HTML)
+    except ValueError:
+        # Handles edge cases such as cross-drive path resolutions on Windows
         return FileResponse(INDEX_HTML)
-    if os.path.isfile(file_path):
-        return FileResponse(file_path)
+
+    if os.path.isfile(target_path):
+        return FileResponse(target_path)
     return FileResponse(INDEX_HTML)
 
 
