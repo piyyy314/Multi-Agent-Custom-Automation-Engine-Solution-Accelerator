@@ -16,3 +16,8 @@ Checking `is not None` on configuration settings that default or fall back to em
 
 **Prevention:**
 Always check truthiness (`if self.password and ...`) or validate that secret parameters are non-empty strings before using them in equality comparisons for authentication or authorization checks.
+
+## 2025-03-31 - Missing User-ID Filters in CosmosDB Database Queries
+**Vulnerability:** Several `CosmosDBClient` query methods (`get_plan_by_plan_id`, `delete_plan_by_plan_id`, `get_steps_by_plan`, `get_mplan`, `get_agent_messages`) omitted `c.user_id=@user_id` from the SQL query string and/or parameters. Consequently, a user could read or delete another user's plans or messages if they supplied the target object ID (Insecure Direct Object Reference / IDOR).
+**Learning:** Database helper functions were constructed with object ID filters (`c.id=@plan_id`) assuming ID uniqueness was sufficient, omitting explicit user ownership checks in the SQL WHERE clause even when parameter lists included `@user_id`.
+**Prevention:** Ensure all tenant/user-scoped data store operations explicitly append `AND c.user_id=@user_id` in query strings and include `@user_id` in query parameter structures.
