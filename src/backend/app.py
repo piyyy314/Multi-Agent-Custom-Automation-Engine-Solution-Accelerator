@@ -23,6 +23,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
 from v4.api.router import app_v4
 
 # Azure monitoring
@@ -118,7 +119,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure health check
+# Configure security response headers and health check
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
 # v4 endpoints
 app.include_router(app_v4)
