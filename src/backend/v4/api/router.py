@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import uuid
 from typing import Optional
 
@@ -880,12 +881,20 @@ async def upload_team_config(
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    if not file.filename.endswith(".json"):
+    # Sanitize filename against path traversal / injection in telemetry logs
+    sanitized_filename = os.path.basename(file.filename) if file.filename else ""
+    if not sanitized_filename.endswith(".json"):
         raise HTTPException(status_code=400, detail="File must be a JSON file")
 
     try:
-        # Read and parse JSON content
-        content = await file.read()
+        # SECURITY: Limit read size (5MB max) to prevent DoS/OOM memory exhaustion from large file uploads
+        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+        content = await file.read(MAX_FILE_SIZE + 1)
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Uploaded file size exceeds the maximum allowed limit of 5MB.",
+            )
         try:
             json_data = json.loads(content.decode("utf-8"))
         except json.JSONDecodeError as e:
