@@ -207,6 +207,7 @@ async def init_team(
         }
 
     except Exception as e:
+        logger.error(f"Error starting request in init_team: {e}")
         track_event_if_configured(
             "Error_Init_Team_Failed",
             {
@@ -214,7 +215,7 @@ async def init_team(
             },
         )
         raise HTTPException(
-            status_code=400, detail=f"Error starting request: {e}"
+            status_code=400, detail="Error starting request"
         ) from e
 
 
@@ -291,9 +292,10 @@ async def process_request(
                 detail=f"Team configuration '{team_id}' not found or access denied",
             )
     except Exception as e:
+        logger.error(f"Error retrieving team configuration: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Error retrieving team configuration: {e}",
+            detail="Error retrieving team configuration",
         ) from e
 
     if not await rai_success(input_task.description, team, memory_store):
@@ -395,6 +397,7 @@ async def process_request(
         }
 
     except Exception as e:
+        logger.error(f"Error starting request in process_request: {e}")
         track_event_if_configured(
             "Error_Request_Start_Failed",
             {
@@ -404,7 +407,7 @@ async def process_request(
             },
         )
         raise HTTPException(
-            status_code=400, detail=f"Error starting request: {e}"
+            status_code=400, detail="Error starting request"
         ) from e
 
 
@@ -657,9 +660,10 @@ async def user_clarification(
                 detail=f"Team configuration '{team_id}' not found or access denied",
             )
     except Exception as e:
+        logger.error(f"Error retrieving team configuration: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Error retrieving team configuration: {e}",
+            detail="Error retrieving team configuration",
         ) from e
     # Set the approval in the orchestration config
     if user_id and human_feedback.request_id:
@@ -872,9 +876,10 @@ async def upload_team_config(
         memory_store = await DatabaseFactory.get_database(user_id=user_id)
 
     except Exception as e:
+        logger.error(f"Error retrieving team configuration: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Error retrieving team configuration: {e}",
+            detail="Error retrieving team configuration",
         ) from e
     # Validate file is provided and is JSON
     if not file:
@@ -983,8 +988,9 @@ async def upload_team_config(
                 team_config.id = team_id  # Ensure id is also set for updates
             team_id = await team_service.save_team_configuration(team_config)
         except ValueError as e:
+            logger.error(f"Failed to save configuration: {e}")
             raise HTTPException(
-                status_code=500, detail=f"Failed to save configuration: {str(e)}"
+                status_code=500, detail="Failed to save configuration"
             ) from e
 
         track_event_if_configured(
