@@ -15,9 +15,27 @@ load_dotenv()
 
 app = FastAPI()
 
+# Configure CORS based on environment variables to avoid wildcard origins security risk
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+frontend_site_name = os.getenv("FRONTEND_SITE_NAME", "")
+app_env = os.getenv("APP_ENV", "dev")
+
+origins = []
+if allowed_origins_env and allowed_origins_env != "*":
+    origins.extend([o.strip() for o in allowed_origins_env.split(",") if o.strip()])
+elif frontend_site_name and frontend_site_name != "*":
+    origins.append(frontend_site_name)
+
+if app_env == "dev":
+    origins.extend(["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8000", "http://127.0.0.1:8000"])
+
+origins = list(dict.fromkeys(origins))
+if not origins:
+    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -30,10 +48,10 @@ INDEX_HTML = os.path.join(BUILD_DIR, "index.html")
 PROXY_API_REQUESTS = os.getenv("PROXY_API_REQUESTS", "false").lower() == "true"
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:8000")
 
-# Serve static files from build directory
-app.mount(
-    "/assets", StaticFiles(directory=os.path.join(BUILD_DIR, "assets")), name="assets"
-)
+# Serve static files from build directory if exists
+assets_dir = os.path.join(BUILD_DIR, "assets")
+if os.path.exists(assets_dir):
+    app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
 
 @app.get("/")
