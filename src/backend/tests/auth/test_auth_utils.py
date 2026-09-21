@@ -77,6 +77,18 @@ def test_get_authenticated_user_details_no_headers_production():
         assert result.get("user_name") is None
 
 
+def test_get_authenticated_user_details_empty_or_whitespace_principal_id_production():
+    """Test get_authenticated_user_details with empty or whitespace principal ID in production."""
+    with patch("common.config.app_config.config") as mock_config:
+        mock_config.APP_ENV = "prod"
+
+        for empty_id in ["", "   ", "\t\n"]:
+            headers = {"x-ms-client-principal-id": empty_id}
+            result = get_authenticated_user_details(headers)
+            assert result.get("user_principal_id") is None
+            assert result.get("user_name") is None
+
+
 def test_get_authenticated_user_details_case_insensitive_headers():
     """Test get_authenticated_user_details with uppercase/mixed-case headers."""
     request_headers = {
