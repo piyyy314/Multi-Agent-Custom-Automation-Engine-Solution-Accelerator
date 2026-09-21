@@ -973,7 +973,10 @@ async def upload_team_config(
                 json_data, user_id
             )
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+            logger.error("Error validating team configuration: %s", str(e))
+            raise HTTPException(
+                status_code=400, detail="Invalid team configuration format"
+            ) from e
 
         # Save the configuration
         try:
