@@ -188,7 +188,8 @@ class CosmosDBClient(DatabaseBase):
 
     async def get_plan_by_plan_id(self, plan_id: str) -> Optional[Plan]:
         """Retrieve a plan by plan_id."""
-        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type"
+        # Enforce user isolation to prevent unauthorized access (BOLA/IDOR)
+        query = "SELECT * FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.plan},
@@ -244,20 +245,24 @@ class CosmosDBClient(DatabaseBase):
 
     async def get_steps_by_plan(self, plan_id: str) -> List[Step]:
         """Retrieve all steps for a plan."""
-        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c.timestamp"
+        # Enforce user isolation
+        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c.timestamp"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.step},
+            {"name": "@user_id", "value": self.user_id},
         ]
         return await self.query_items(query, parameters, Step)
 
     async def get_step(self, step_id: str, session_id: str) -> Optional[Step]:
         """Retrieve a step by step_id and session_id."""
-        query = "SELECT * FROM c WHERE c.id=@step_id AND c.session_id=@session_id AND c.data_type=@data_type"
+        # Enforce user isolation
+        query = "SELECT * FROM c WHERE c.id=@step_id AND c.session_id=@session_id AND c.data_type=@data_type AND c.user_id=@user_id"
         parameters = [
             {"name": "@step_id", "value": step_id},
             {"name": "@session_id", "value": session_id},
             {"name": "@data_type", "value": DataType.step},
+            {"name": "@user_id", "value": self.user_id},
         ]
         results = await self.query_items(query, parameters, Step)
         return results[0] if results else None
@@ -442,10 +447,13 @@ class CosmosDBClient(DatabaseBase):
 
     async def delete_plan_by_plan_id(self, plan_id: str) -> bool:
         """Delete a plan by its ID."""
-        query = "SELECT c.id, c.session_id FROM c WHERE c.id=@plan_id "
+        # Enforce user isolation
+        query = "SELECT c.id, c.session_id FROM c WHERE c.id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
 
         params = [
             {"name": "@plan_id", "value": plan_id},
+            {"name": "@data_type", "value": DataType.plan},
+            {"name": "@user_id", "value": self.user_id},
         ]
         items = self.container.query_items(query=query, parameters=params)
         print("Items to delete planid:", items)
@@ -472,10 +480,12 @@ class CosmosDBClient(DatabaseBase):
 
     async def get_mplan(self, plan_id: str) -> Optional[messages.MPlan]:
         """Retrieve a mplan configuration by mplan_id."""
-        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type"
+        # Enforce user isolation
+        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.m_plan},
+            {"name": "@user_id", "value": self.user_id},
         ]
         results = await self.query_items(query, parameters, messages.MPlan)
         return results[0] if results else None
@@ -490,10 +500,12 @@ class CosmosDBClient(DatabaseBase):
 
     async def get_agent_messages(self, plan_id: str) -> List[AgentMessageData]:
         """Retrieve an agent message by message_id."""
-        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type ORDER BY c._ts ASC"
+        # Enforce user isolation
+        query = "SELECT * FROM c WHERE c.plan_id=@plan_id AND c.data_type=@data_type AND c.user_id=@user_id ORDER BY c._ts ASC"
         parameters = [
             {"name": "@plan_id", "value": plan_id},
             {"name": "@data_type", "value": DataType.m_plan_message},
+            {"name": "@user_id", "value": self.user_id},
         ]
 
         return await self.query_items(query, parameters, AgentMessageData)
@@ -505,12 +517,14 @@ class CosmosDBClient(DatabaseBase):
 
     async def delete_team_agent(self, team_id: str, agent_name: str) -> None:
         """Delete the current team for a user."""
-        query = "SELECT c.id, c.session_id FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND c.agent_name=@agent_name"
+        # Enforce user isolation
+        query = "SELECT c.id, c.session_id FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND c.agent_name=@agent_name AND c.user_id=@user_id"
 
         params = [
             {"name": "@team_id", "value": team_id},
             {"name": "@agent_name", "value": agent_name},
             {"name": "@data_type", "value": DataType.current_team_agent},
+            {"name": "@user_id", "value": self.user_id},
         ]
         items = self.container.query_items(query=query, parameters=params)
         print("Items to delete:", items)
@@ -531,11 +545,13 @@ class CosmosDBClient(DatabaseBase):
         self, team_id: str, agent_name: str
     ) -> Optional[CurrentTeamAgent]:
         """Retrieve a team agent by team_id and agent_name."""
-        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND c.agent_name=@agent_name"
+        # Enforce user isolation
+        query = "SELECT * FROM c WHERE c.team_id=@team_id AND c.data_type=@data_type AND c.agent_name=@agent_name AND c.user_id=@user_id"
         params = [
             {"name": "@team_id", "value": team_id},
             {"name": "@agent_name", "value": agent_name},
             {"name": "@data_type", "value": DataType.current_team_agent},
+            {"name": "@user_id", "value": self.user_id},
         ]
 
         results = await self.query_items(query, params, CurrentTeamAgent)
