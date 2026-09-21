@@ -883,9 +883,20 @@ async def upload_team_config(
     if not file.filename.endswith(".json"):
         raise HTTPException(status_code=400, detail="File must be a JSON file")
 
+    # SECURITY: Prevent Denial of Service (DoS) attacks via oversized file uploads by enforcing a maximum size limit (5MB).
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+    if file.size and file.size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400, detail="File size exceeds maximum allowed limit of 5MB"
+        )
+
     try:
         # Read and parse JSON content
         content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400, detail="File size exceeds maximum allowed limit of 5MB"
+            )
         try:
             json_data = json.loads(content.decode("utf-8"))
         except json.JSONDecodeError as e:
