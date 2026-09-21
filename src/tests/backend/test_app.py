@@ -254,8 +254,8 @@ class TestAppConfiguration:
         """Test that middleware stack is configured."""
         assert len(app.user_middleware) > 0
     
-    def test_cors_middleware_allows_all_origins(self):
-        """Test CORS middleware is configured to allow all origins."""
+    def test_cors_middleware_allows_configured_origins(self):
+        """Test CORS middleware is configured to allow specific configured origins."""
         from starlette.middleware.cors import CORSMiddleware
         cors_middleware = None
         for m in app.user_middleware:
@@ -264,8 +264,10 @@ class TestAppConfiguration:
                 break
         
         assert cors_middleware is not None
-        # Check that allow_origins includes "*" - using kwargs attribute
-        assert "*" in cors_middleware.kwargs.get('allow_origins', [])
+        # Check that allow_origins does not use wildcard "*" and contains expected origins
+        origins = cors_middleware.kwargs.get('allow_origins', [])
+        assert "*" not in origins
+        assert "http://localhost:3000" in origins
     
     def test_cors_middleware_allows_credentials(self):
         """Test CORS middleware allows credentials."""
