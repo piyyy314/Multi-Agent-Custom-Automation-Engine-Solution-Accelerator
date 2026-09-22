@@ -894,19 +894,18 @@ async def upload_team_config(
             ) from e
 
         # Validate content with RAI before processing
-        if not team_id:
-            rai_valid, rai_error = await rai_validate_team_config(json_data, memory_store)
-            if not rai_valid:
-                track_event_if_configured(
-                    "Error_Config_RAI_Validation_Failed",
-                    {
-                        "status": "failed",
-                        "user_id": user_id,
-                        "filename": file.filename,
-                        "reason": rai_error,
-                    },
-                )
-                raise HTTPException(status_code=400, detail=rai_error)
+        rai_valid, rai_error = await rai_validate_team_config(json_data, memory_store)
+        if not rai_valid:
+            track_event_if_configured(
+                "Error_Config_RAI_Validation_Failed",
+                {
+                    "status": "failed",
+                    "user_id": user_id,
+                    "filename": file.filename,
+                    "reason": rai_error,
+                },
+            )
+            raise HTTPException(status_code=400, detail=rai_error)
 
         track_event_if_configured(
             "Config_RAI_Validation_Passed",
