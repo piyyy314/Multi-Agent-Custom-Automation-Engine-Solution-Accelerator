@@ -1,3 +1,4 @@
+import hmac
 import logging
 from typing import Awaitable, Callable, Dict
 
@@ -72,9 +73,12 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
             status_code = 200 if status.status else 503
             status_message = "OK" if status.status else "Service Unavailable"
 
+            code_param = request.query_params.get("code")
+            # Use hmac.compare_digest to prevent timing attacks and require a non-empty password
             if (
-                self.password is not None
-                and request.query_params.get("code") == self.password
+                bool(self.password)
+                and code_param is not None
+                and hmac.compare_digest(code_param, self.password)
             ):
                 return JSONResponse(jsonable_encoder(status), status_code=status_code)
 
