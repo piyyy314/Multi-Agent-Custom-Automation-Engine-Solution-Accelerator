@@ -6,8 +6,13 @@ import logging
 def get_authenticated_user_details(request_headers):
     user_object = {}
 
+    # Normalize incoming header keys to lowercase for case-insensitive lookup
+    normalized_input_headers = (
+        {k.lower(): v for k, v in request_headers.items()} if request_headers else {}
+    )
+
     # check the headers for the Principal-Id (the guid of the signed in user)
-    if "x-ms-client-principal-id" not in request_headers:
+    if "x-ms-client-principal-id" not in normalized_input_headers:
         logging.info("No user principal found in headers")
         # if it's not, assume we're in development mode and return a default user
         from . import sample_user
@@ -15,7 +20,7 @@ def get_authenticated_user_details(request_headers):
         raw_user_object = sample_user.sample_user
     else:
         # if it is, get the user details from the EasyAuth headers
-        raw_user_object = {k: v for k, v in request_headers.items()}
+        raw_user_object = request_headers
 
     normalized_headers = {k.lower(): v for k, v in raw_user_object.items()}
     user_object["user_principal_id"] = normalized_headers.get(
