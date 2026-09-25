@@ -56,6 +56,19 @@ class TestGetAuthenticatedUserDetails:
         assert result["user_name"] == "user@test.com"
         assert result["auth_provider"] == "aad"
         assert result["auth_token"] == "test.token"
+
+    def test_with_uppercase_principal_id_header(self):
+        """Test that capitalized principal ID header is recognized and does not fall back to sample user."""
+        headers = {
+            "X-Ms-Client-Principal-Id": "custom-user-guid-999",
+            "X-Ms-Client-Principal-Name": "customuser@example.com"
+        }
+
+        result = get_authenticated_user_details(headers)
+
+        # Verify user principal ID is correctly mapped from capitalized header key
+        assert result["user_principal_id"] == "custom-user-guid-999"
+        assert result["user_name"] == "customuser@example.com"
     
     def test_fallback_to_sample_user_when_no_principal_id(self):
         """Test fallback to sample user when x-ms-client-principal-id is not present."""
