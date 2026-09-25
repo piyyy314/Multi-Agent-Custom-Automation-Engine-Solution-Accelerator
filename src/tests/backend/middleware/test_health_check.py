@@ -527,6 +527,54 @@ class TestHealthCheckMiddleware:
                     assert result is mock_response_instance
 
     @pytest.mark.asyncio
+    async def test_dispatch_method_with_empty_password_protection(self):
+        """Test dispatch method when password is empty string (should NOT expose JSON details)."""
+        mock_request = Mock()
+        mock_request.url.path = "/healthz"
+        mock_request.query_params.get.return_value = ""
+
+        mock_call_next = AsyncMock()
+        middleware = HealthCheckMiddleware(self.mock_app, {}, password="")
+
+        with patch.object(middleware, 'check') as mock_check:
+            mock_status = Mock()
+            mock_status.status = True
+            mock_check.return_value = mock_status
+
+            with patch.object(health_check_module, 'PlainTextResponse') as mock_response:
+                mock_response_instance = Mock()
+                mock_response.return_value = mock_response_instance
+
+                result = await middleware.dispatch(mock_request, mock_call_next)
+
+                mock_response.assert_called_once_with("OK", status_code=200)
+                assert result is mock_response_instance
+
+    @pytest.mark.asyncio
+    async def test_dispatch_method_with_invalid_code(self):
+        """Test dispatch method with incorrect password query param."""
+        mock_request = Mock()
+        mock_request.url.path = "/healthz"
+        mock_request.query_params.get.return_value = "wrong_code"
+
+        mock_call_next = AsyncMock()
+        middleware = HealthCheckMiddleware(self.mock_app, {}, password="secret123")
+
+        with patch.object(middleware, 'check') as mock_check:
+            mock_status = Mock()
+            mock_status.status = True
+            mock_check.return_value = mock_status
+
+            with patch.object(health_check_module, 'PlainTextResponse') as mock_response:
+                mock_response_instance = Mock()
+                mock_response.return_value = mock_response_instance
+
+                result = await middleware.dispatch(mock_request, mock_call_next)
+
+                mock_response.assert_called_once_with("OK", status_code=200)
+                assert result is mock_response_instance
+
+    @pytest.mark.asyncio
     async def test_check_method_with_empty_name_check(self):
         """Test check method with empty name in checks."""
         async def empty_name_check():
