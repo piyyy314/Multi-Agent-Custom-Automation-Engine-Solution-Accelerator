@@ -235,10 +235,12 @@ class TestInitTeam:
         assert resp.json()["requires_team_upload"] is True
         rt.store.delete_current_team.assert_awaited()
 
-    def test_exception_returns_400(self, rt):
-        rt.database_factory.get_database = AsyncMock(side_effect=Exception("boom"))
+    def test_exception_returns_400_and_sanitizes_error_detail(self, rt):
+        rt.database_factory.get_database = AsyncMock(side_effect=Exception("internal secret detail"))
         resp = rt.client.get("/api/v4/init_team")
         assert resp.status_code == 400
+        assert resp.json()["detail"] == "Failed to initialize team configuration."
+        assert "internal secret detail" not in resp.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -536,6 +538,24 @@ class TestUploadTeamConfig:
         )
         resp = rt.client.post("/api/v4/upload_team_config", files=self._file())
         assert resp.status_code == 400
+
+    def test_save_team_config_value_error_sanitized(self, rt):
+        rt.rai_validate_team_config.return_value = (True, None)
+        rt.team_service.validate_team_models.return_value = (True, [])
+        rt.team_service.validate_team_search_indexes.return_value = (True, [])
+        team_conf = MagicMock()
+        team_conf.agents = []
+        team_conf.starting_tasks = []
+        team_conf.name = "MyTeam"
+        team_conf.model_dump.return_value = {"name": "MyTeam"}
+        rt.team_service.validate_and_parse_team_config.return_value = team_conf
+        rt.team_service.save_team_configuration = AsyncMock(
+            side_effect=ValueError("secret internal DB connection failure")
+        )
+        resp = rt.client.post("/api/v4/upload_team_config", files=self._file())
+        assert resp.status_code == 500
+        assert resp.json()["detail"] == "Failed to save configuration."
+        assert "secret internal DB connection failure" not in resp.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
