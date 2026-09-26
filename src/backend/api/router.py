@@ -224,6 +224,8 @@ async def init_team(
         }
 
     except Exception as e:
+        # Security: Log error internally without exposing internal details/stack trace to the client
+        logger.error("Error initializing team: %s", str(e), exc_info=True)
         track_event_if_configured(
             "Error_Init_Team_Failed",
             {
@@ -231,7 +233,7 @@ async def init_team(
             },
         )
         raise HTTPException(
-            status_code=400, detail=f"Error starting request: {e}"
+            status_code=400, detail="Failed to initialize team configuration."
         ) from e
 
 
@@ -308,9 +310,11 @@ async def process_request(
                 detail=f"Team configuration '{team_id}' not found or access denied",
             )
     except Exception as e:
+        # Security: Log error internally without exposing database error details to client
+        logger.error("Error retrieving team configuration in process_request: %s", str(e), exc_info=True)
         raise HTTPException(
             status_code=400,
-            detail=f"Error retrieving team configuration: {e}",
+            detail="Failed to retrieve team configuration.",
         ) from e
 
     if not await rai_success(input_task.description, team, memory_store):
@@ -449,6 +453,8 @@ async def process_request(
         }
 
     except Exception as e:
+        # Security: Log exception on server side and sanitize public response detail
+        logger.error("Error starting process request: %s", str(e), exc_info=True)
         track_event_if_configured(
             "Error_Request_Start_Failed",
             {
@@ -458,7 +464,7 @@ async def process_request(
             },
         )
         raise HTTPException(
-            status_code=400, detail=f"Error starting request: {e}"
+            status_code=400, detail="Failed to start processing request."
         ) from e
 
 
@@ -995,8 +1001,10 @@ async def upload_team_config(
         try:
             json_data = json.loads(content.decode("utf-8"))
         except json.JSONDecodeError as e:
+            # Security: Sanitize JSON syntax error output to prevent internal format leakage
+            logger.error("Invalid JSON upload format: %s", str(e))
             raise HTTPException(
-                status_code=400, detail=f"Invalid JSON format: {str(e)}"
+                status_code=400, detail="Invalid JSON format."
             ) from e
 
         # Validate content with RAI before processing
@@ -1089,8 +1097,10 @@ async def upload_team_config(
                 team_configuration.id = team_id  # Ensure id is also set for updates
             team_id = await team_service.save_team_configuration(team_configuration)
         except ValueError as e:
+            # Security: Log full ValueError and sanitize message sent to user
+            logger.error("ValueError saving team configuration: %s", str(e), exc_info=True)
             raise HTTPException(
-                status_code=500, detail=f"Failed to save configuration: {str(e)}"
+                status_code=500, detail="Failed to save configuration."
             ) from e
 
         track_event_if_configured(
