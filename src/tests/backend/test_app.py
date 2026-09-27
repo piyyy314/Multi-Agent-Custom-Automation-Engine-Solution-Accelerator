@@ -42,6 +42,12 @@ for _ma_key in [
     'common', 'common.models', 'common.models.messages',
     'backend.common.models.messages',
     'common.config', 'common.config.app_config',
+    'orchestration', 'orchestration.connection_config',
+    'orchestration.orchestration_manager',
+    'services', 'services.plan_service', 'services.team_service',
+    'api', 'api.router', 'auth', 'auth.auth_utils', 'config', 'config.agent_registry',
+    'models', 'models.messages', 'models.plan_models',
+    'opentelemetry', 'opentelemetry.trace', 'opentelemetry.instrumentation', 'opentelemetry.instrumentation.fastapi'
 ]:
     if _ma_key in sys.modules and not isinstance(sys.modules[_ma_key], ModuleType):
         del sys.modules[_ma_key]
