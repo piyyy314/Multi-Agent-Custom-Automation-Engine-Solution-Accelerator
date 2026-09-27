@@ -344,6 +344,14 @@ class TestPlanApproval:
 # /clarification/ask
 # ---------------------------------------------------------------------------
 class TestClarificationAsk:
+    def test_no_user(self, rt):
+        _no_user(rt)
+        resp = rt.client.post(
+            "/api/v4/clarification/ask",
+            json={"question": "why?", "user_id": "user-1"},
+        )
+        assert resp.status_code == 401
+
     def test_missing_fields(self, rt):
         resp = rt.client.post("/api/v4/clarification/ask", json={"question": ""})
         assert resp.status_code == 400
