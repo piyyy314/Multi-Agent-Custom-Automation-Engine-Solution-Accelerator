@@ -116,10 +116,10 @@ else:
         "No Application Insights connection string found. Telemetry disabled."
     )
 
-# Add this near the top of your app.py, after initializing the app
+# Restrict allowed origins to the configured frontend site URL to prevent insecure wildcard credentials sharing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development; restrict in production
+    allow_origins=[frontend_url] if frontend_url else ["http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
