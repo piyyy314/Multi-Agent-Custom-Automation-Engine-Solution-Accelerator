@@ -1473,6 +1473,8 @@ async def get_plan_by_id(
                 "GetPlanId", {"status_code": 400, "detail": "no plan id"}
             )
             raise HTTPException(status_code=400, detail="no plan id")
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error retrieving plan: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
