@@ -701,12 +701,12 @@ class TestGetPlanById:
 
     def test_no_plan_id(self, rt):
         resp = rt.client.get("/api/v4/plan")
-        assert resp.status_code == 500
+        assert resp.status_code == 400
 
     def test_plan_not_found(self, rt):
         rt.store.get_plan_by_plan_id.return_value = None
         resp = rt.client.get("/api/v4/plan?plan_id=p1")
-        assert resp.status_code == 500
+        assert resp.status_code == 404
 
     def test_success(self, rt):
         plan = MagicMock()
