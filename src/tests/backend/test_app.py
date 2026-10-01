@@ -38,12 +38,8 @@ os.environ.setdefault("AZURE_OPENAI_RAI_DEPLOYMENT_NAME", "test-rai-deployment")
 # Clear any module-level Mock pollution from earlier tests in the suite.
 # common.models.* gets mocked by test_agent_utils.py, test_response_handlers.py, etc.
 from types import ModuleType
-for _ma_key in [
-    'common', 'common.models', 'common.models.messages',
-    'backend.common.models.messages',
-    'common.config', 'common.config.app_config',
-]:
-    if _ma_key in sys.modules and not isinstance(sys.modules[_ma_key], ModuleType):
+for _ma_key in list(sys.modules.keys()):
+    if isinstance(sys.modules[_ma_key], Mock):
         del sys.modules[_ma_key]
 
 # Mock external dependencies that may not be installed in test environment
@@ -267,8 +263,8 @@ class TestAppConfiguration:
         """Test that middleware stack is configured."""
         assert len(app.user_middleware) > 0
     
-    def test_cors_middleware_allows_all_origins(self):
-        """Test CORS middleware is configured to allow all origins."""
+    def test_cors_middleware_restricts_origins(self):
+        """Test CORS middleware is configured to restrict allowed origins (no wildcard *)."""
         from starlette.middleware.cors import CORSMiddleware
         cors_middleware = None
         for m in app.user_middleware:
@@ -277,8 +273,10 @@ class TestAppConfiguration:
                 break
         
         assert cors_middleware is not None
-        # Check that allow_origins includes "*" - using kwargs attribute
-        assert "*" in cors_middleware.kwargs.get('allow_origins', [])
+        allowed_origins = cors_middleware.kwargs.get('allow_origins', [])
+        # Check that wildcard "*" is not allowed when allow_credentials is True
+        assert "*" not in allowed_origins
+        assert len(allowed_origins) > 0
     
     def test_cors_middleware_allows_credentials(self):
         """Test CORS middleware allows credentials."""

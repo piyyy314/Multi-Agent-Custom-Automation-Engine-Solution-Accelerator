@@ -116,10 +116,14 @@ else:
         "No Application Insights connection string found. Telemetry disabled."
     )
 
-# Add this near the top of your app.py, after initializing the app
+# Configure CORS with explicit allowed origins to prevent unauthorized credentialed cross-origin access
+allowed_origins = [
+    origin.strip() for origin in frontend_url.split(",") if origin.strip()
+] if frontend_url else ["http://127.0.0.1:3000", "http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development; restrict in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
