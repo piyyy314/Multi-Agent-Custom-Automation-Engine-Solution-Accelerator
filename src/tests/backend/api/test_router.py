@@ -236,9 +236,11 @@ class TestInitTeam:
         rt.store.delete_current_team.assert_awaited()
 
     def test_exception_returns_400(self, rt):
-        rt.database_factory.get_database = AsyncMock(side_effect=Exception("boom"))
+        rt.database_factory.get_database = AsyncMock(side_effect=Exception("boom_secret"))
         resp = rt.client.get("/api/v4/init_team")
         assert resp.status_code == 400
+        assert resp.json()["detail"] == "Error starting request"
+        assert "boom_secret" not in resp.json()["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -701,12 +703,14 @@ class TestGetPlanById:
 
     def test_no_plan_id(self, rt):
         resp = rt.client.get("/api/v4/plan")
-        assert resp.status_code == 500
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "no plan id"
 
     def test_plan_not_found(self, rt):
         rt.store.get_plan_by_plan_id.return_value = None
         resp = rt.client.get("/api/v4/plan?plan_id=p1")
-        assert resp.status_code == 500
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Plan not found"
 
     def test_success(self, rt):
         plan = MagicMock()
