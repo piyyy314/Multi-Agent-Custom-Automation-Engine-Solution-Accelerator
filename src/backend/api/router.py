@@ -990,8 +990,14 @@ async def upload_team_config(
         raise HTTPException(status_code=400, detail="File must be a JSON file")
 
     try:
-        # Read and parse JSON content
-        content = await file.read()
+        # Read and parse JSON content with file size limit (5MB) to prevent DoS/memory exhaustion
+        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+        content = await file.read(MAX_FILE_SIZE + 1)
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail="File size exceeds maximum allowed limit of 5MB",
+            )
         try:
             json_data = json.loads(content.decode("utf-8"))
         except json.JSONDecodeError as e:

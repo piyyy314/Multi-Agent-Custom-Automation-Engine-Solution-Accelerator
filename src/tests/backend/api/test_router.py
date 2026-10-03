@@ -537,6 +537,15 @@ class TestUploadTeamConfig:
         resp = rt.client.post("/api/v4/upload_team_config", files=self._file())
         assert resp.status_code == 400
 
+    def test_file_too_large(self, rt):
+        large_content = b"a" * (5 * 1024 * 1024 + 1)
+        resp = rt.client.post(
+            "/api/v4/upload_team_config",
+            files=self._file(content=large_content, name="large.json"),
+        )
+        assert resp.status_code == 400
+        assert "File size exceeds maximum allowed limit" in resp.json()["detail"]
+
 
 # ---------------------------------------------------------------------------
 # /team_configs (GET all)
