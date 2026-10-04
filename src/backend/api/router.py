@@ -642,12 +642,25 @@ async def clarification_ask(request: Request):
     2. Blocks until the user responds (or the request times out).
     3. Returns ``{answer}`` so the MCP tool can pass it back to the agent.
     """
+    # Authenticate user and enforce authorization matching payload user_id
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user_id = authenticated_user.get("user_principal_id")
+    if not authenticated_user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
     body = await request.json()
     question = body.get("question", "")
     user_id = body.get("user_id", "")
 
     if not question or not user_id:
         raise HTTPException(status_code=400, detail="question and user_id are required")
+
+    if user_id != authenticated_user_id:
+        raise HTTPException(
+            status_code=403, detail="Forbidden: user_id mismatch"
+        )
 
     request_id = str(uuid.uuid4())
 
