@@ -116,10 +116,18 @@ else:
         "No Application Insights connection string found. Telemetry disabled."
     )
 
-# Add this near the top of your app.py, after initializing the app
+# Security: Restrict CORS origins in non-development environments to prevent cross-origin
+# data access and credential exposure from untrusted domains.
+if config.APP_ENV == "dev":
+    cors_origins = ["*"]
+else:
+    cors_origins = list(filter(None, {
+        config.FRONTEND_SITE_NAME,
+    }))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development; restrict in production
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
