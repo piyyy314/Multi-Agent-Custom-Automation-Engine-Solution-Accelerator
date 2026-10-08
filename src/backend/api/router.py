@@ -638,16 +638,30 @@ async def clarification_ask(request: Request):
     """Synchronous bridge for the MCP ``ask_user`` tool.
 
     The MCP server POSTs ``{question, user_id}`` here. This endpoint:
-    1. Sends a ``USER_CLARIFICATION_REQUEST`` to the user via WebSocket.
-    2. Blocks until the user responds (or the request times out).
-    3. Returns ``{answer}`` so the MCP tool can pass it back to the agent.
+    1. Authenticates the user principal.
+    2. Sends a ``USER_CLARIFICATION_REQUEST`` to the user via WebSocket.
+    3. Blocks until the user responds (or the request times out).
+    4. Returns ``{answer}`` so the MCP tool can pass it back to the agent.
     """
+    authenticated_user = get_authenticated_user_details(request_headers=request.headers)
+    authenticated_user_id = authenticated_user["user_principal_id"]
+    if not authenticated_user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
+
     body = await request.json()
     question = body.get("question", "")
-    user_id = body.get("user_id", "")
+    user_id = body.get("user_id", "") or authenticated_user_id
 
-    if not question or not user_id:
-        raise HTTPException(status_code=400, detail="question and user_id are required")
+    # Security check: Ensure authenticated user matches requested user_id
+    if user_id != authenticated_user_id:
+        raise HTTPException(
+            status_code=403, detail="Forbidden: user_id mismatch with authenticated principal"
+        )
+
+    if not question:
+        raise HTTPException(status_code=400, detail="question is required")
 
     request_id = str(uuid.uuid4())
 
