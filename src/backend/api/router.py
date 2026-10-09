@@ -1,6 +1,8 @@
 import asyncio
+import hmac
 import json
 import logging
+import os
 import uuid
 from typing import Optional
 
@@ -642,15 +644,31 @@ async def clarification_ask(request: Request):
     2. Blocks until the user responds (or the request times out).
     3. Returns ``{answer}`` so the MCP tool can pass it back to the agent.
     """
-    # Validate user authentication
-    authenticated_user = get_authenticated_user_details(
-        request_headers=request.headers
+    principal_id = request.headers.get("x-ms-client-principal-id", "").strip()
+    expected_service_token = os.environ.get("MCP_BACKEND_AUTH_TOKEN", "")
+    service_token = request.headers.get("x-mcp-backend-token", "")
+    service_authenticated = bool(
+        expected_service_token
+        and service_token
+        and expected_service_token.isascii()
+        and service_token.isascii()
+        and hmac.compare_digest(service_token, expected_service_token)
     )
-    authenticated_user_id = authenticated_user.get("user_principal_id")
-    if not authenticated_user_id:
+    if not principal_id and not service_authenticated:
         raise HTTPException(
             status_code=401, detail="Missing or invalid user information"
         )
+
+    authenticated_user_id = None
+    if principal_id:
+        authenticated_user = get_authenticated_user_details(
+            request_headers=request.headers
+        )
+        authenticated_user_id = authenticated_user.get("user_principal_id")
+        if not authenticated_user_id:
+            raise HTTPException(
+                status_code=401, detail="Missing or invalid user information"
+            )
 
     body = await request.json()
     question = body.get("question", "")
@@ -658,6 +676,12 @@ async def clarification_ask(request: Request):
 
     if not question or not user_id:
         raise HTTPException(status_code=400, detail="question and user_id are required")
+    if authenticated_user_id:
+        if user_id != authenticated_user_id:
+            raise HTTPException(
+                status_code=403, detail="User ID does not match principal"
+            )
+        user_id = authenticated_user_id
 
     request_id = str(uuid.uuid4())
 
