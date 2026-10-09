@@ -288,6 +288,26 @@ class TestAppConfiguration:
                 assert m.kwargs.get('allow_credentials') is True
                 break
 
+    def test_cors_middleware_restricts_origins_in_prod(self):
+        """Test CORS middleware restricts allow_origins in production environment."""
+        from starlette.middleware.cors import CORSMiddleware
+        from fastapi import FastAPI
+        from backend.common.config.app_config import config
+
+        with patch.object(config, 'APP_ENV', 'prod'), patch.object(config, 'FRONTEND_SITE_NAME', 'https://frontend.example.com'):
+            test_app = FastAPI()
+            cors_origins = list(filter(None, {config.FRONTEND_SITE_NAME})) if config.APP_ENV != "dev" else ["*"]
+            test_app.add_middleware(
+                CORSMiddleware,
+                allow_origins=cors_origins,
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            cors_middleware = next(m for m in test_app.user_middleware if m.cls == CORSMiddleware)
+            assert "*" not in cors_middleware.kwargs.get('allow_origins', [])
+            assert cors_middleware.kwargs.get('allow_origins') == ["https://frontend.example.com"]
+
 
 class TestUserLanguageModel:
     """Test class for UserLanguage model validation."""

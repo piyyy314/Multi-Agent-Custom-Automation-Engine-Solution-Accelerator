@@ -355,6 +355,14 @@ class TestClarificationAsk:
         )
         assert resp.status_code == 401
 
+    def test_user_mismatch(self, rt):
+        resp = rt.client.post(
+            "/api/v4/clarification/ask",
+            json={"question": "why?", "user_id": "user-other"},
+            headers={"x-ms-client-principal-id": "user-1"},
+        )
+        assert resp.status_code == 403
+
     def test_missing_fields(self, rt):
         resp = rt.client.post(
             "/api/v4/clarification/ask",

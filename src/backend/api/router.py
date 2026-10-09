@@ -640,9 +640,10 @@ async def clarification_ask(request: Request):
     """Synchronous bridge for the MCP ``ask_user`` tool.
 
     The MCP server POSTs ``{question, user_id}`` here. This endpoint:
-    1. Sends a ``USER_CLARIFICATION_REQUEST`` to the user via WebSocket.
-    2. Blocks until the user responds (or the request times out).
-    3. Returns ``{answer}`` so the MCP tool can pass it back to the agent.
+    1. Authenticates the user principal.
+    2. Sends a ``USER_CLARIFICATION_REQUEST`` to the user via WebSocket.
+    3. Blocks until the user responds (or the request times out).
+    4. Returns ``{answer}`` so the MCP tool can pass it back to the agent.
     """
     principal_id = request.headers.get("x-ms-client-principal-id", "").strip()
     expected_service_token = os.environ.get("MCP_BACKEND_AUTH_TOKEN", "")

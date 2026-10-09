@@ -20,6 +20,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
 # TEMPORARY — upstream PR #5690 (agent-framework 1.4.0) fixes the fc_ duplicate
 # variant but NOT the orphaned function_call_output variant that also triggers
 # "Progress ledger creation failed" in multi-agent Magentic workflows.
@@ -116,18 +117,26 @@ else:
         "No Application Insights connection string found. Telemetry disabled."
     )
 
-# Add this near the top of your app.py, after initializing the app
+# Security: Restrict CORS origins in non-development environments to prevent cross-origin
+# data access and credential exposure from untrusted domains.
+if config.APP_ENV == "dev":
+    cors_origins = ["*"]
+else:
+    cors_origins = list(filter(None, {
+        config.FRONTEND_SITE_NAME,
+    }))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development; restrict in production
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure health check
+# Configure health check and security headers
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
-# new flat-structure endpoints
+app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(app_router)
 logging.info("Added health check middleware")
 
