@@ -184,7 +184,12 @@ AZURE_CLIENT_ID=your-client-id-here
 AZURE_JWKS_URI=https://login.microsoftonline.com/your-tenant-id/discovery/v2.0/keys
 AZURE_ISSUER=https://sts.windows.net/your-tenant-id/
 AZURE_AUDIENCE=api://your-client-id
+MCP_BACKEND_AUTH_TOKEN=<same secret configured in the backend>
 ```
+
+`MCP_BACKEND_AUTH_TOKEN` is required for the MCP server's `ask_user` tool to
+authenticate its request to the backend. Configure the same secret in both
+services; do not commit the value to source control.
 
 ### Authentication
 

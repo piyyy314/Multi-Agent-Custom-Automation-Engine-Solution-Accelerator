@@ -345,7 +345,10 @@ class TestPlanApproval:
 # ---------------------------------------------------------------------------
 class TestClarificationAsk:
     def test_no_user(self, rt):
-        _no_user(rt)
+        from backend.auth.auth_utils import get_authenticated_user_details
+
+        # The helper's development fallback must not authenticate a headerless request.
+        assert get_authenticated_user_details({})["user_principal_id"]
         resp = rt.client.post(
             "/api/v4/clarification/ask",
             json={"question": "why?", "user_id": "user-1"},
@@ -356,11 +359,16 @@ class TestClarificationAsk:
         resp = rt.client.post(
             "/api/v4/clarification/ask",
             json={"question": "why?", "user_id": "user-other"},
+            headers={"x-ms-client-principal-id": "user-1"},
         )
         assert resp.status_code == 403
 
     def test_missing_fields(self, rt):
-        resp = rt.client.post("/api/v4/clarification/ask", json={"question": "", "user_id": "user-1"})
+        resp = rt.client.post(
+            "/api/v4/clarification/ask",
+            json={"question": ""},
+            headers={"x-ms-client-principal-id": "user-1"},
+        )
         assert resp.status_code == 400
 
     def test_success(self, rt):
@@ -368,9 +376,19 @@ class TestClarificationAsk:
         resp = rt.client.post(
             "/api/v4/clarification/ask",
             json={"question": "why?", "user_id": "user-1"},
+            headers={"x-ms-client-principal-id": "user-1"},
         )
         assert resp.status_code == 200
         assert resp.json()["answer"] == "answer!"
+
+    def test_mcp_service_authentication(self, rt, monkeypatch):
+        monkeypatch.setenv("MCP_BACKEND_AUTH_TOKEN", "configured-secret")
+        resp = rt.client.post(
+            "/api/v4/clarification/ask",
+            json={"question": "why?", "user_id": "user-1"},
+            headers={"X-MCP-Backend-Token": "configured-secret"},
+        )
+        assert resp.status_code == 200
 
     def test_timeout(self, rt):
         import asyncio
@@ -381,6 +399,7 @@ class TestClarificationAsk:
         resp = rt.client.post(
             "/api/v4/clarification/ask",
             json={"question": "why?", "user_id": "user-1"},
+            headers={"x-ms-client-principal-id": "user-1"},
         )
         assert resp.status_code == 200
         assert resp.json()["answer"] == ""
@@ -392,6 +411,7 @@ class TestClarificationAsk:
         resp = rt.client.post(
             "/api/v4/clarification/ask",
             json={"question": "why?", "user_id": "user-1"},
+            headers={"x-ms-client-principal-id": "user-1"},
         )
         assert resp.status_code == 200
         assert resp.json()["answer"] == ""

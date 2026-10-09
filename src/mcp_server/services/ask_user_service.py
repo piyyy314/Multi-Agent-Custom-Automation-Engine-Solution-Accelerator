@@ -80,7 +80,9 @@ class AskUserService(MCPToolBase):
 
             try:
                 async with httpx.AsyncClient(timeout=ASK_USER_TIMEOUT) as client:
-                    resp = await client.post(url, json=payload)
+                    token = os.environ.get("MCP_BACKEND_AUTH_TOKEN")
+                    headers = {"X-MCP-Backend-Token": token} if token else {}
+                    resp = await client.post(url, json=payload, headers=headers)
                     resp.raise_for_status()
                     data = resp.json()
                     answer = data.get("answer", "")
