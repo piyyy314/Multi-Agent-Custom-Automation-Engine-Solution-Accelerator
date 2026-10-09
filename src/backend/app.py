@@ -20,6 +20,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # Local imports
 from middleware.health_check import HealthCheckMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
 # TEMPORARY — upstream PR #5690 (agent-framework 1.4.0) fixes the fc_ duplicate
 # variant but NOT the orphaned function_call_output variant that also triggers
 # "Progress ledger creation failed" in multi-agent Magentic workflows.
@@ -133,9 +134,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure health check
+# Configure health check and security headers
 app.add_middleware(HealthCheckMiddleware, password="", checks={})
-# new flat-structure endpoints
+app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(app_router)
 logging.info("Added health check middleware")
 
