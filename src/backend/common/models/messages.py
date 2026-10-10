@@ -256,7 +256,7 @@ class InputTask(BaseModel):
 
 
 class UserLanguage(BaseModel):
-    language: str
+    language: str = Field(..., max_length=35, pattern=r"^[a-zA-Z0-9\-_]+$")
 
 
 class AgentMessageData(BaseDataModel):

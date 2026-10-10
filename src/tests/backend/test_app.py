@@ -311,21 +311,28 @@ class TestAppConfiguration:
 
 class TestUserLanguageModel:
     """Test class for UserLanguage model validation."""
-    
-    def test_user_language_empty_string(self):
-        """Test UserLanguage with empty string."""
-        lang = UserLanguage(language="")
-        assert lang.language == ""
-    
+
     def test_user_language_with_underscore_format(self):
         """Test UserLanguage with underscore format (e.g. en_US)."""
         lang = UserLanguage(language="en_US")
         assert lang.language == "en_US"
-    
+
     def test_user_language_lowercase(self):
         """Test UserLanguage with lowercase language code."""
         lang = UserLanguage(language="en")
         assert lang.language == "en"
+
+    def test_user_language_validation_invalid_pattern(self):
+        """Test that invalid language string with special characters raises ValidationError."""
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            UserLanguage(language="en-US; DROP TABLE users;")
+
+    def test_user_language_validation_exceeds_max_length(self):
+        """Test that language string exceeding max_length raises ValidationError."""
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            UserLanguage(language="a" * 36)
 
 
 @pytest.mark.asyncio
