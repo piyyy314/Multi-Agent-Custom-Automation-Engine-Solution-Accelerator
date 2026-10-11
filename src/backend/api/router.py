@@ -1021,7 +1021,9 @@ async def upload_team_config(
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    if not file.filename.endswith(".json"):
+    # Sanitize filename to prevent path traversal and log/telemetry injection
+    safe_filename = os.path.basename(file.filename or "")
+    if not safe_filename.endswith(".json"):
         raise HTTPException(status_code=400, detail="File must be a JSON file")
 
     try:
@@ -1043,7 +1045,7 @@ async def upload_team_config(
                     {
                         "status": "failed",
                         "user_id": user_id,
-                        "file_name": file.filename,
+                        "file_name": safe_filename,
                         "reason": rai_error,
                     },
                 )
@@ -1051,7 +1053,7 @@ async def upload_team_config(
 
         track_event_if_configured(
             "Config_RAI_Validation_Passed",
-            {"status": "passed", "user_id": user_id, "file_name": file.filename},
+            {"status": "passed", "user_id": user_id, "file_name": safe_filename},
         )
         team_service = TeamService(memory_store)
 
@@ -1069,7 +1071,7 @@ async def upload_team_config(
                 {
                     "status": "failed",
                     "user_id": user_id,
-                    "file_name": file.filename,
+                    "file_name": safe_filename,
                     "missing_models": missing_models,
                 },
             )
@@ -1077,7 +1079,7 @@ async def upload_team_config(
 
         track_event_if_configured(
             "Config_Model_Validation_Passed",
-            {"status": "passed", "user_id": user_id, "file_name": file.filename},
+            {"status": "passed", "user_id": user_id, "file_name": safe_filename},
         )
 
         # Validate search indexes
@@ -1096,7 +1098,7 @@ async def upload_team_config(
                 {
                     "status": "failed",
                     "user_id": user_id,
-                    "file_name": file.filename,
+                    "file_name": safe_filename,
                     "search_errors": search_errors,
                 },
             )
@@ -1105,7 +1107,7 @@ async def upload_team_config(
         logger.info(f"Search validation passed for user: {user_id}")
         track_event_if_configured(
             "Config_Search_Validation_Passed",
-            {"status": "passed", "user_id": user_id, "file_name": file.filename},
+            {"status": "passed", "user_id": user_id, "file_name": safe_filename},
         )
 
         # Validate and parse the team configuration
