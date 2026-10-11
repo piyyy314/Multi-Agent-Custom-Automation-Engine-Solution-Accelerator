@@ -572,6 +572,34 @@ class TestUploadTeamConfig:
         resp = rt.client.post("/api/v4/upload_team_config", files=self._file())
         assert resp.status_code == 400
 
+    def test_upload_team_config_filename_sanitization(self, rt, monkeypatch):
+        rt.rai_validate_team_config.return_value = (True, None)
+        rt.team_service.validate_team_models.return_value = (True, [])
+        rt.team_service.validate_team_search_indexes.return_value = (True, [])
+        team_conf = MagicMock()
+        team_conf.agents = []
+        team_conf.starting_tasks = []
+        team_conf.name = "MyTeam"
+        team_conf.model_dump.return_value = {"name": "MyTeam"}
+        rt.team_service.validate_and_parse_team_config.return_value = team_conf
+        rt.team_service.save_team_configuration.return_value = "team-123"
+
+        tracked_events = []
+        def mock_track_event(event_name, props):
+            tracked_events.append((event_name, props))
+
+        monkeypatch.setattr(router_mod, "track_event_if_configured", mock_track_event)
+
+        resp = rt.client.post(
+            "/api/v4/upload_team_config",
+            files=self._file(name="../../etc/passwd.json")
+        )
+        assert resp.status_code == 200
+        # Ensure that any file_name in telemetry is sanitized to the basename
+        for _, props in tracked_events:
+            if "file_name" in props:
+                assert props["file_name"] == "passwd.json"
+
 
 # ---------------------------------------------------------------------------
 # /team_configs (GET all)
