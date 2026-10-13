@@ -1514,10 +1514,19 @@ async def get_plan_by_id(
 
 
 @app_router.get("/images/{blob_name:path}")
-async def get_generated_image(blob_name: str):
+async def get_generated_image(blob_name: str, request: Request):
     """Proxy a generated image from Azure Blob Storage."""
     from azure.storage.blob import BlobServiceClient
     from fastapi.responses import Response
+
+    authenticated_user = get_authenticated_user_details(
+        request_headers=request.headers
+    )
+    user_id = authenticated_user.get("user_principal_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid user information"
+        )
 
     blob_url = config.AZURE_STORAGE_BLOB_URL
     container = config.AZURE_STORAGE_IMAGES_CONTAINER

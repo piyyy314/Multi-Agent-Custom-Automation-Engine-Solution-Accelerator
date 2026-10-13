@@ -761,6 +761,15 @@ class TestGetPlanById:
 # /images/{blob_name}
 # ---------------------------------------------------------------------------
 class TestGetGeneratedImage:
+    def test_unauthenticated(self, rt, monkeypatch):
+        monkeypatch.setattr(
+            router_mod,
+            "get_authenticated_user_details",
+            MagicMock(return_value={"user_principal_id": None}),
+        )
+        resp = rt.client.get("/api/v4/images/pic.png")
+        assert resp.status_code == 401
+
     def test_storage_not_configured(self, rt, monkeypatch):
         cfg = MagicMock()
         cfg.AZURE_STORAGE_BLOB_URL = ""
