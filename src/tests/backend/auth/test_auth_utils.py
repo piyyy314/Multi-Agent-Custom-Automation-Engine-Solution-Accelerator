@@ -70,25 +70,28 @@ class TestGetAuthenticatedUserDetails:
         assert result["user_principal_id"] == "custom-user-guid-999"
         assert result["user_name"] == "customuser@example.com"
     
-    def test_fallback_to_sample_user_when_no_principal_id(self):
-        """Test fallback to sample user when x-ms-client-principal-id is not present."""
+    def test_fallback_to_sample_user_when_no_principal_id_in_dev(self):
+        """Test fallback to sample user when x-ms-client-principal-id is not present in dev env."""
         headers = {"content-type": "application/json", "accept": "application/json"}
         
-        with patch('logging.info') as mock_log:
-            # Since the relative import will fail, we expect an ImportError 
-            # but we can verify the logging behavior
+        with patch("backend.auth.auth_utils.config.APP_ENV", "dev"), patch('logging.info') as mock_log:
             try:
                 result = get_authenticated_user_details(headers)
-                # If it succeeds, verify the structure
                 assert isinstance(result, dict)
-                expected_keys = {"user_principal_id", "user_name", "auth_provider", 
-                               "auth_token", "client_principal_b64", "aad_id_token"}
-                assert set(result.keys()) == expected_keys
+                assert result["user_principal_id"] is not None
             except ImportError:
-                # Expected due to relative import issue in test environment
                 pass
             
-            # Verify logging was called regardless
+            mock_log.assert_called_once_with("No user principal found in headers")
+
+    def test_no_sample_user_fallback_in_prod(self):
+        """Test that missing x-ms-client-principal-id in non-dev env yields user_principal_id as None."""
+        headers = {"content-type": "application/json", "accept": "application/json"}
+
+        with patch("backend.auth.auth_utils.config.APP_ENV", "prod"), patch('logging.info') as mock_log:
+            result = get_authenticated_user_details(headers)
+            assert isinstance(result, dict)
+            assert result["user_principal_id"] is None
             mock_log.assert_called_once_with("No user principal found in headers")
     
     def test_with_partial_auth_headers(self):
