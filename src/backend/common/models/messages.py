@@ -256,7 +256,12 @@ class InputTask(BaseModel):
 
 
 class UserLanguage(BaseModel):
-    language: str
+    language: str = Field(
+        default="en-US",
+        max_length=15,
+        pattern=r"^[a-zA-Z0-9\-_]*$",
+        description="Browser language tag in BCP 47 format (e.g., en-US)",
+    )
 
 
 class AgentMessageData(BaseDataModel):

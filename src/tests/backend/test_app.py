@@ -327,6 +327,19 @@ class TestUserLanguageModel:
         lang = UserLanguage(language="en")
         assert lang.language == "en"
 
+    def test_user_language_invalid_too_long(self):
+        """Test UserLanguage rejects strings exceeding 15 characters."""
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            UserLanguage(language="en-US-variant-too-long")
+
+    def test_user_language_invalid_characters(self):
+        """Test UserLanguage rejects invalid characters and potential injection payloads."""
+        from pydantic import ValidationError
+        for invalid_input in ["<script>", "en;DROP TABLE", "en-US\nHeader:Value", "fr-FR!"]:
+            with pytest.raises(ValidationError):
+                UserLanguage(language=invalid_input)
+
 
 @pytest.mark.asyncio
 async def test_user_browser_language_endpoint_logs_info(caplog):
