@@ -226,6 +226,7 @@ async def init_team(
         }
 
     except Exception as e:
+        logger.error("Error starting request: %s", e, exc_info=True)
         track_event_if_configured(
             "Error_Init_Team_Failed",
             {
@@ -233,7 +234,7 @@ async def init_team(
             },
         )
         raise HTTPException(
-            status_code=400, detail=f"Error starting request: {e}"
+            status_code=400, detail="Error starting request"
         ) from e
 
 
