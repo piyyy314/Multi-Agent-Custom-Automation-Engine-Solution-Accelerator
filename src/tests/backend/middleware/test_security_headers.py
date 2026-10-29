@@ -20,3 +20,5 @@ def test_security_headers_middleware():
     assert response.headers["X-XSS-Protection"] == "1; mode=block"
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert response.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
+    assert response.headers["Permissions-Policy"] == "geolocation=(), microphone=(), camera=()"
+    assert response.headers["X-Permitted-Cross-Domain-Policies"] == "none"
