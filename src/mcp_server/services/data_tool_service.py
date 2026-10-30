@@ -37,12 +37,18 @@ class DataToolService(MCPToolBase):
     def _find_file(self, filename: str) -> str:
         """
         Searches recursively within the dataset_path for an exact filename match (case-sensitive).
-        Returns the full path if found, else None.
+        Returns the full path if found and within dataset_path, else None.
         """
         logger = logging.getLogger("find_file")
+        base_dir = os.path.realpath(self.dataset_path)
         for root, _, files in os.walk(self.dataset_path):
             if filename in files:
-                full_path = os.path.join(root, filename)
+                full_path = os.path.realpath(os.path.join(root, filename))
+                if not (full_path == base_dir or full_path.startswith(base_dir + os.sep)):
+                    logger.warning(
+                        "Attempted path traversal outside base directory: %s", full_path
+                    )
+                    return None
                 logger.info("Found file: %s", full_path)
                 return full_path
         logger.warning(
