@@ -236,9 +236,10 @@ class TestInitTeam:
         rt.store.delete_current_team.assert_awaited()
 
     def test_exception_returns_400(self, rt):
-        rt.database_factory.get_database = AsyncMock(side_effect=Exception("boom"))
+        rt.database_factory.get_database = AsyncMock(side_effect=Exception("sensitive database detail"))
         resp = rt.client.get("/api/v4/init_team")
         assert resp.status_code == 400
+        assert resp.json()["detail"] == "Error starting request"
 
 
 # ---------------------------------------------------------------------------
